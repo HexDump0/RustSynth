@@ -18,15 +18,15 @@ Selection rule: pick the first `READY` item with the lowest ID unless a task fol
 | T03 | DONE | Collect golden fixtures from legacy examples | T00 | curated example set, fixture manifest, expected outputs notes |
 | T04 | DONE | Implement preprocessor crate | T01, T02, T03 | Rust preprocessor with tests for `#define`, random substitution, GUI parameter metadata |
 | T05 | DONE | Implement lexer/tokenizer crate | T01, T02, T03 | token stream and diagnostics tests |
-| T06 | READY | Implement parser AST crate | T04, T05 | AST, parse diagnostics, parser fixtures |
-| T07 | BLOCKED | Implement semantic resolution layer | T06 | resolved rule graph, primitive resolution, validation |
-| T08 | BLOCKED | Implement evaluator/builder core | T07 | deterministic expansion engine and scene emission |
-| T09 | BLOCKED | Implement transformations and state parity tests | T08 | transform/state tests covering matrix, HSV, alpha, seed behavior |
-| T10 | BLOCKED | Define canonical scene representation | T08 | renderer-agnostic scene/object model |
-| T10A | BLOCKED | Define renderer boundary and viewport API | T10 | traits/interfaces allowing Bevy, OpenGL, or `wgpu` viewport backends |
-| T11 | BLOCKED | Implement template exporter | T10 | template export backend and tests |
-| T12 | BLOCKED | Implement OBJ exporter | T10 | OBJ backend and tests |
-| T13 | BLOCKED | Decide scripting compatibility approach | T02 | decision doc: JS compatibility, Rhai, or deferred scope |
+| T06 | DONE | Implement parser AST crate | T04, T05 | AST, parse diagnostics, parser fixtures |
+| T07 | DONE | Implement semantic resolution layer | T06 | resolved rule graph, primitive resolution, validation |
+| T08 | DONE | Implement evaluator/builder core | T07 | deterministic expansion engine and scene emission |
+| T09 | DONE | Implement transformations and state parity tests | T08 | transform/state tests covering matrix, HSV, alpha, seed behavior |
+| T10 | DONE | Define canonical scene representation | T08 | renderer-agnostic scene/object model |
+| T10A | READY | Define renderer boundary and viewport API | T10 | traits/interfaces allowing Bevy, OpenGL, or `wgpu` viewport backends |
+| T11 | READY | Implement template exporter | T10 | template export backend and tests |
+| T12 | READY | Implement OBJ exporter | T10 | OBJ backend and tests |
+| T13 | READY | Decide scripting compatibility approach | T02 | decision doc: JS compatibility, Rhai, or deferred scope |
 | T14 | BLOCKED | Build GTK4 + Relm4 desktop app shell | T01, T10, T10A | app window, editor, file IO, settings shell |
 | T15 | BLOCKED | Prototype Bevy viewport backend | T01, T10, T10A | scene-to-Bevy viewport prototype |
 | T16 | BLOCKED | Prototype custom OpenGL viewport backend | T01, T10, T10A | scene-to-OpenGL viewport prototype |

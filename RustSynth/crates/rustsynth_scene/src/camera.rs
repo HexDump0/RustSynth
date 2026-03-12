@@ -18,6 +18,25 @@ pub struct CameraState {
     pub scale: f32,
 }
 
+impl Default for CameraState {
+    fn default() -> Self {
+        // Identity rotation, zero translation, unit scale.
+        #[rustfmt::skip]
+        let identity16 = [
+            1.0, 0.0, 0.0, 0.0,
+            0.0, 1.0, 0.0, 0.0,
+            0.0, 0.0, 1.0, 0.0,
+            0.0, 0.0, 0.0, 1.0,
+        ];
+        Self {
+            translation: [0.0, 0.0, 0.0],
+            rotation: identity16,
+            pivot: [0.0, 0.0, 0.0],
+            scale: 1.0,
+        }
+    }
+}
+
 impl CameraState {
     pub fn translation_vec3(&self) -> Vec3 {
         Vec3::from_array(self.translation)

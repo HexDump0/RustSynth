@@ -11,5 +11,7 @@ pub enum PrimitiveKind {
     Dot,
     Grid,
     Template,
-    Triangle,
+    /// Inline triangle. The payload is the raw vertex string from the
+    /// `triangle[…]` syntax, e.g. `"[0 0 0; 1 0 0; 0 1 0]"`.
+    Triangle(String),
 }

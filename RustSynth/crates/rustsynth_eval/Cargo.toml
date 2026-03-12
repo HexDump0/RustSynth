@@ -12,6 +12,7 @@ rustsynth_scene = { path = "../rustsynth_scene" }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
 log = { workspace = true }
+glam = { workspace = true }
 
 [dev-dependencies]
 pretty_assertions = { workspace = true }

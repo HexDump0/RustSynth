@@ -277,6 +277,7 @@ name = "rustsynth_eval"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "glam",
  "log",
  "pretty_assertions",
  "rustsynth_core",

@@ -1,6 +1,6 @@
 //! Math helpers — re-exports from `glam` and supplementary utilities.
 
-pub use glam::{Mat4, Quat, Vec3, Vec4};
+pub use glam::{Mat3, Mat4, Quat, Vec3, Vec4};
 
 /// Degrees to radians helper.
 #[inline]

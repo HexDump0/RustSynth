@@ -13,8 +13,21 @@ pub struct Rng {
 }
 
 impl Rng {
+    /// Create a new `Rng` from a seed.
+    ///
+    /// The seed is hashed through one round of splitmix64 before being used as
+    /// the xorshift64 state.  This ensures that even small seeds (including 0,
+    /// which is a fixed-point for raw xorshift64) produce well-distributed
+    /// first outputs.
     pub fn new(seed: u64) -> Self {
-        Self { state: seed }
+        // splitmix64 finaliser — maps any u64 to a non-zero, well-distributed value.
+        let mut s = seed.wrapping_add(0x9E3779B97F4A7C15u64);
+        s = (s ^ (s >> 30)).wrapping_mul(0xBF58476D1CE4E5B9u64);
+        s = (s ^ (s >> 27)).wrapping_mul(0x94D049BB133111EBu64);
+        s = s ^ (s >> 31);
+        // xorshift64 is a fixed-point at 0; guard against the astronomically
+        // unlikely case that splitmix64 returns 0.
+        Self { state: if s == 0 { 1 } else { s } }
     }
 
     /// Advance the generator and return the next u64.
