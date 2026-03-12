@@ -21,13 +21,13 @@ Every feature is mapped to its legacy source module(s), its target Rust crate, t
 
 | Feature | Legacy detail | Status |
 |---|---|---|
-| `#define name value` substitution | Line-oriented text replace, max 100 recursive substitutions | 🏗 |
-| `#define name val (float:lo-hi)` | Extracts `FloatParameter`; substitutes default value in text | 🏗 |
-| `#define name val (int:lo-hi)` | Extracts `IntParameter`; substitutes default value in text | 🏗 |
-| Recursion guard on `#define` | Warns and skips if the replacement contains the token itself | 🏗 |
-| `random[lo,hi]` substitution | Seeded RNG replaces `random[a,b]` with a float in [a,b] | 🏗 |
+| `#define name value` substitution | Line-oriented text replace, max 100 recursive substitutions | ✅ |
+| `#define name val (float:lo-hi)` | Extracts `FloatParameter`; substitutes default value in text | ✅ |
+| `#define name val (int:lo-hi)` | Extracts `IntParameter`; substitutes default value in text | ✅ |
+| Recursion guard on `#define` | Warns and skips if the replacement contains the token itself | ✅ |
+| `random[lo,hi]` substitution | Seeded RNG replaces `random[a,b]` with a float in [a,b] | ✅ |
 | `#include` handling | Legacy comment in parser hints at `#include` support; not in Preprocessor.cpp | ❌ |
-| Preprocessor-driven GUI metadata | `FloatParameter` / `IntParameter` objects exposed to the UI layer | 🏗 |
+| Preprocessor-driven GUI metadata | `FloatParameter` / `IntParameter` objects exposed to the UI layer | ✅ |
 
 ---
 
@@ -39,15 +39,15 @@ Every feature is mapped to its legacy source module(s), its target Rust crate, t
 
 | Feature | Legacy detail | Status |
 |---|---|---|
-| Symbol types | `Undefined`, `LeftBracket`, `RightBracket`, `MoreThan`, `End`, `Number`, `Multiply`, `UserString`, `Rule`, `Set`, `Operator` | 🏗 |
-| Operators (keywords) | `c`, `reflect`, `color`, `blend`, `a`, `alpha`, `matrix`, `h`, `hue`, `sat`, `b`, `brightness`, `v`, `x`, `y`, `z`, `rx`, `ry`, `rz`, `s`, `fx`, `fy`, `fz`, `maxdepth`, `weight`, `md`, `w` | 🏗 |
-| `//` line comments | Stripped during tokenization | 🏗 |
-| `/* */` block comments | Stripped during tokenization | 🏗 |
-| `#` preprocessor lines | Treated as inline comment (not parsed) in tokenizer | 🏗 |
-| `[...]` bracket token | Kept as single token for vector/matrix params | 🏗 |
-| Integer vs float number | Tracks `isInteger` flag on number tokens | 🏗 |
-| Case normalisation | `UserString` tokens are lowercased | 🏗 |
-| Arithmetic expression in params | `1/3` style division in `s` args (e.g. Menger.es) | ❌ |
+| Symbol types | `Undefined`, `LeftBracket`, `RightBracket`, `MoreThan`, `End`, `Number`, `Multiply`, `UserString`, `Rule`, `Set`, `Operator` | ✅ |
+| Operators (keywords) | `c`, `reflect`, `color`, `blend`, `a`, `alpha`, `matrix`, `h`, `hue`, `sat`, `b`, `brightness`, `v`, `x`, `y`, `z`, `rx`, `ry`, `rz`, `s`, `fx`, `fy`, `fz`, `maxdepth`, `weight`, `md`, `w` | ✅ |
+| `//` line comments | Stripped during tokenization | ✅ |
+| `/* */` block comments | Stripped during tokenization | ✅ |
+| `#` preprocessor lines | Treated as inline comment (not parsed) in tokenizer | ✅ |
+| `[...]` bracket token | Kept as single token for vector/matrix params | ✅ |
+| Integer vs float number | Tracks `isInteger` flag on number tokens | ✅ |
+| Case normalisation | `UserString` tokens are lowercased | ✅ |
+| Arithmetic expression in params | `1/3` style division in `s` args (e.g. Menger.es) | ✅ |
 
 ---
 

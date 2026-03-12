@@ -16,9 +16,9 @@ Selection rule: pick the first `READY` item with the lowest ID unless a task fol
 | T01 | DONE | Bootstrap Rust workspace in `RustSynth/` | T00 | Cargo workspace, crate skeletons, base lint/test config |
 | T02 | DONE | Build legacy feature matrix and parity checklist | T00 | feature inventory mapped to legacy modules/examples |
 | T03 | DONE | Collect golden fixtures from legacy examples | T00 | curated example set, fixture manifest, expected outputs notes |
-| T04 | READY | Implement preprocessor crate | T01, T02, T03 | Rust preprocessor with tests for `#define`, random substitution, GUI parameter metadata |
-| T05 | READY | Implement lexer/tokenizer crate | T01, T02, T03 | token stream and diagnostics tests |
-| T06 | BLOCKED | Implement parser AST crate | T04, T05 | AST, parse diagnostics, parser fixtures |
+| T04 | DONE | Implement preprocessor crate | T01, T02, T03 | Rust preprocessor with tests for `#define`, random substitution, GUI parameter metadata |
+| T05 | DONE | Implement lexer/tokenizer crate | T01, T02, T03 | token stream and diagnostics tests |
+| T06 | READY | Implement parser AST crate | T04, T05 | AST, parse diagnostics, parser fixtures |
 | T07 | BLOCKED | Implement semantic resolution layer | T06 | resolved rule graph, primitive resolution, validation |
 | T08 | BLOCKED | Implement evaluator/builder core | T07 | deterministic expansion engine and scene emission |
 | T09 | BLOCKED | Implement transformations and state parity tests | T08 | transform/state tests covering matrix, HSV, alpha, seed behavior |

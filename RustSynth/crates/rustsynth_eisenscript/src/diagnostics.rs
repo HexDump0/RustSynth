@@ -8,7 +8,7 @@ pub enum Severity {
 }
 
 /// A single diagnostic message with source location.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Diagnostic {
     pub severity: Severity,
     pub line: usize,
