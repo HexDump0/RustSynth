@@ -21,7 +21,7 @@ Rewrite Structure Synth in Rust while keeping the work:
 4. **Update the master todo.** Mark task state changes, added subtasks, and blockers.
 5. **Leave handoff notes.** Assume the next agent has no memory except what is in this repository.
 6. **Use the legacy code as the behavior reference.** Do not invent semantics when the old code answers the question.
-7. **Keep the core independent of UI and renderer choices.** Parser, semantics, and evaluator must not depend on GTK, Relm4, Bevy, or any frontend.
+7. **Keep the core independent of UI and renderer choices.** Parser, semantics, and evaluator must not depend on GTK, Relm4, wgpu, or any frontend.
 8. **Add tests with behavior changes.** Parser/evaluator/export work should land with automated tests whenever practical.
 9. **Prefer parity before redesign.** Improvements are welcome after a legacy-equivalent baseline exists.
 10. **Record decisions.** If you choose a design path, write it down in the task folder.
@@ -82,9 +82,9 @@ Recommended split:
 - `rustsynth_render_api` — renderer boundary traits and viewport-facing scene contracts
 - `rustsynth_export_template` — template exporter
 - `rustsynth_export_obj` — OBJ exporter
-- `rustsynth_viewport_bevy` — optional Bevy viewport backend
-- `rustsynth_viewport_gl` — optional custom OpenGL viewport backend
-- `rustsynth_viewport_wgpu` — optional later `wgpu` viewport backend
+- `rustsynth_viewport_wgpu` — **chosen** viewport backend: wgpu via `GtkGLArea` EGL surface
+- `rustsynth_viewport_bevy` — deferred; Bevy viewport option (not the chosen path)
+- `rustsynth_viewport_gl` — deferred; custom OpenGL option (not the chosen path)
 - `rustsynth_app_gtk` — GTK4 + Relm4 desktop UI shell
 - optional: `rustsynth_script` — scripting compatibility layer
 
@@ -116,21 +116,24 @@ This stack is preferred for:
 
 ## Viewport guidance
 
-Do not hard-wire the viewport to a single technology yet.
+The viewport backend decision is made: **`wgpu` via `GtkGLArea` EGL surface**.
 
 Current preferred rule:
 
 - the app shell is GTK4 + Relm4
 - the core is headless
-- the viewport sits behind a renderer boundary
+- the viewport sits behind a renderer boundary (`rustsynth_render_api`)
+- the viewport implementation is `rustsynth_viewport_wgpu`
 
-Candidate viewport backends:
+Chosen approach:
 
-- Bevy
-- custom OpenGL
-- later `wgpu`
+- `GtkGLArea` owns the surface and EGL context — GTK drives the loop
+- `wgpu` targets that context via `wgpu::Backends::GL`
+- GTK signals (`realize`, `unrealize`, `resize`, `render`) drive the wgpu lifecycle
+- camera input is handled by GTK event controllers, no inter-thread channels needed
+- WGSL shaders handle primitive rendering (box, sphere, cylinder, etc.)
 
-Bevy remains a good viewport candidate, but it is no longer the assumed app-shell framework.
+Bevy and custom OpenGL are deferred indefinitely. Do not implement T15 or T16.
 
 ## When context is running low
 

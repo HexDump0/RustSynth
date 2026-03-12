@@ -13,11 +13,14 @@ The current architecture direction is:
 - no commitment yet to a pure GTK-rendered viewport
 - a renderer boundary must keep viewport implementations swappable
 
-Current viewport candidates:
+Chosen viewport backend:
 
-- Bevy
-- custom OpenGL
-- later `wgpu`
+- **`wgpu`** via `GtkGLArea` EGL surface (`rustsynth_viewport_wgpu`)
+
+Deferred viewport options (not the chosen path):
+
+- Bevy — fights GTK for window/event-loop ownership; ECS overhead not justified
+- custom OpenGL — wgpu covers this use case with a cleaner API
 
 ## Why this direction was chosen
 

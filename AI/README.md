@@ -60,11 +60,11 @@ The current preferred direction is:
 
 - headless core first
 - `gtk4-rs` + `Relm4` for the desktop application shell
-- do not commit yet to pure GTK viewport rendering
-- keep viewport backends swappable behind a renderer boundary
+- `wgpu` via `GtkGLArea` EGL surface as the chosen viewport backend
+- viewport sits behind a renderer boundary (`rustsynth_render_api`) so the backend remains swappable
 
-Planned viewport options include:
+Viewport decision:
 
-- Bevy
-- custom OpenGL
-- a later `wgpu` backend
+- **chosen: `wgpu`** — targets the EGL context created by `GtkGLArea`; GTK owns the surface and drives the render loop
+- deferred: Bevy — too much engine overhead, fights GTK for window ownership
+- deferred: custom OpenGL — wgpu covers this use case with a better API

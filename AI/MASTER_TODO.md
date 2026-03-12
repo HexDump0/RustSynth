@@ -28,9 +28,9 @@ Selection rule: pick the first `READY` item with the lowest ID unless a task fol
 | T12 | READY | Implement OBJ exporter | T10 | OBJ backend and tests |
 | T13 | READY | Decide scripting compatibility approach | T02 | decision doc: JS compatibility, Rhai, or deferred scope |
 | T14 | BLOCKED | Build GTK4 + Relm4 desktop app shell | T01, T10, T10A | app window, editor, file IO, settings shell |
-| T15 | BLOCKED | Prototype Bevy viewport backend | T01, T10, T10A | scene-to-Bevy viewport prototype |
-| T16 | BLOCKED | Prototype custom OpenGL viewport backend | T01, T10, T10A | scene-to-OpenGL viewport prototype |
-| T17 | LATER | Explore `wgpu` viewport backend | T01, T10, T10A | feasibility notes or prototype for a `wgpu` viewport |
+| T15 | LATER | Prototype Bevy viewport backend | T01, T10, T10A | scene-to-Bevy viewport prototype (deferred — wgpu is the chosen path) |
+| T16 | LATER | Prototype custom OpenGL viewport backend | T01, T10, T10A | scene-to-OpenGL viewport prototype (deferred — wgpu is the chosen path) |
+| T17 | BLOCKED | Implement `wgpu` viewport backend | T01, T10, T10A | wgpu renderer via `GtkGLArea` EGL surface: geometry upload, WGSL shaders, arcball camera |
 | T18 | BLOCKED | Implement variable editor and parameter controls | T04, T14 | UI for preprocessor-driven variables |
 | T19 | BLOCKED | Implement camera/settings import-export | T10, T14 | camera state persistence and script insertion support |
 | T20 | BLOCKED | Integrate template export UI flow | T11, T14 | export dialog and file output flow |
@@ -38,7 +38,7 @@ Selection rule: pick the first `READY` item with the lowest ID unless a task fol
 | T22 | BLOCKED | Decide raytracer strategy for v1 | T02, T10, T10A | decision doc: reimplement, replace, or defer |
 | T23 | BLOCKED | Port examples and gallery workflow | T14 | example browser/import path and curated sample set |
 | T24 | BLOCKED | End-to-end parity regression suite | T08, T11, T12, T14 | golden tests and parity report |
-| T25 | BLOCKED | Performance profiling and optimization pass | T15, T16, T24 | profiling notes and targeted fixes |
+| T25 | BLOCKED | Performance profiling and optimization pass | T17, T24 | profiling notes and targeted fixes |
 | T26 | BLOCKED | Packaging, docs, and v1 release prep | T24 | user docs, build docs, release checklist |
 
 ## Notes
@@ -47,5 +47,6 @@ Selection rule: pick the first `READY` item with the lowest ID unless a task fol
 - `T04` through `T12` should keep the core fully headless.
 - `T10A` is the key boundary task before committing to any viewport implementation.
 - `T14` is the preferred shell path because GTK4 + Relm4 is now the chosen desktop framework direction.
+- `T17` is the chosen viewport path: `wgpu` via `GtkGLArea` EGL surface. Bevy (T15) and custom OpenGL (T16) are deferred indefinitely.
 - Do not let frontend work block the language/runtime work.
 - If new tasks are discovered, add them here with dependencies and a short deliverable description.

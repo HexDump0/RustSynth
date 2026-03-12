@@ -49,7 +49,7 @@ This minimizes risk because the old app mixes Qt UI, parsing, evaluation, render
 - triangle special syntax
 
 ### Output backends
-- realtime OpenGL viewport
+- realtime wgpu viewport (via `GtkGLArea` EGL surface)
 - template exporter
 - OBJ exporter
 - integrated raytracer
@@ -80,9 +80,9 @@ RustSynth/
     rustsynth_export_template/
     rustsynth_export_obj/
     rustsynth_app_gtk/
-    rustsynth_viewport_bevy/
-    rustsynth_viewport_gl/
-    rustsynth_viewport_wgpu/   # optional later backend
+    rustsynth_viewport_wgpu/   # chosen viewport backend
+    rustsynth_viewport_bevy/   # deferred
+    rustsynth_viewport_gl/     # deferred
     rustsynth_script/        # optional, if scripting is kept in v1
   tests/
     fixtures/
@@ -118,14 +118,14 @@ OBJ exporter with grouping behavior and sphere tessellation settings.
 ### `rustsynth_app_gtk`
 GTK4 + Relm4 desktop application shell. Owns the editor, panes, dialogs, menus, settings, and orchestration of the headless core plus whichever viewport backend is selected.
 
+### `rustsynth_viewport_wgpu`
+**Chosen viewport backend.** Renders the canonical scene using wgpu targeting a `GtkGLArea` EGL context. Implements `ViewportBackend` with WGSL shaders, geometry upload, and an arcball camera uniform. GTK4 owns the surface and drives the render loop via signals.
+
 ### `rustsynth_viewport_bevy`
-Optional Bevy adapter that renders the canonical scene interactively.
+Deferred. Bevy adapter skeleton kept for reference. Not the chosen implementation path.
 
 ### `rustsynth_viewport_gl`
-Optional custom OpenGL viewport backend, likely integrated through the GTK shell.
-
-### `rustsynth_viewport_wgpu`
-Optional later `wgpu` viewport backend if a custom renderer becomes preferable.
+Deferred. Custom OpenGL backend skeleton kept for reference. Not the chosen implementation path.
 
 ### `rustsynth_script`
 Optional scripting compatibility layer. For v1, consider `rhai` first unless JavaScript compatibility becomes mandatory.
@@ -151,37 +151,35 @@ Optional scripting compatibility layer. For v1, consider `rhai` first unless Jav
 
 ## Viewport assessment
 
-## Short answer
+## Decision
 
-Do **not** lock the rewrite to a single viewport implementation yet.
+**`wgpu` via `GtkGLArea` EGL surface is the chosen viewport backend.**
 
-## Why Bevy still fits as a backend
+## Why wgpu fits best
 
-- strong realtime 3D support
-- ECS can manage scene objects cleanly
-- modern rendering stack
-- cross-platform potential
-- good path to performance improvements on modern hardware
+- GTK4's `GtkGLArea` owns the EGL context — wgpu targets it directly via `wgpu::Backends::GL`
+- no separate thread, no inter-process channels, no window handle hacks
+- GTK signals (`realize`, `unrealize`, `resize`, `render`) map directly onto the `ViewportBackend` trait lifecycle
+- camera input (orbit, zoom, pan) is handled by GTK event controllers in the normal GTK event loop
+- the scene is a flat list of `SceneObject` — no ECS needed, each object is one draw call
+- WGSL shaders give full control over primitive rendering without engine overhead
+- smaller binary, faster compile times, and less dependency surface than Bevy
 
-## Why GTK-only viewport rendering should not be assumed yet
+## Why Bevy was not chosen
 
-- GTK4 is a strong widget toolkit, but not a complete 3D engine architecture
-- `GLArea` is usable for custom rendering, but it pushes more renderer ownership into the app
-- viewport complexity should be evaluated separately from shell complexity
+- Bevy requires disabling its own window and event loop, fighting WinitPlugin ownership
+- requires a dedicated thread and `mpsc` channels for every viewport interaction
+- ECS is architectural overhead for a static procedural scene model
+- significant compile-time and binary-size cost for features that are not needed here
 
-## Recommendation
+## Architecture
 
-Use the stack like this:
-
-- evaluator produces a renderer-agnostic `Scene`
-- `rustsynth_render_api` defines how viewport backends consume that scene
+- evaluator produces a renderer-agnostic `Scene` (`rustsynth_scene`)
+- `rustsynth_render_api` defines the `ViewportBackend` trait all backends implement
 - GTK4 + Relm4 owns the desktop shell
-- viewport backend can be:
-  - Bevy
-  - custom OpenGL
-  - later `wgpu`
+- `rustsynth_viewport_wgpu` implements `ViewportBackend` and is wired to a `GtkGLArea` widget in the app shell
 
-Do not force the entire application into Bevy. Do not force the viewport into GTK-only rendering before the boundary is defined.
+Bevy (T15) and custom OpenGL (T16) are deferred indefinitely.
 
 ## Milestones
 
@@ -219,12 +217,11 @@ Do not force the entire application into Bevy. Do not force the viewport into GT
 - export dialogs
 
 ### Milestone 5 — viewport and rendering
-- define renderer boundary
-- evaluate and prototype viewport backends
-- Bevy scene bridge
-- custom OpenGL bridge if warranted
-- camera controls
-- selection/inspection if desired
+- define renderer boundary (T10A)
+- implement wgpu viewport backend in `rustsynth_viewport_wgpu` (T17)
+- wire `GtkGLArea` + wgpu EGL surface in the app shell (T14)
+- WGSL shaders for box, sphere, cylinder primitives
+- arcball camera controls
 - screenshot support
 
 ### Milestone 6 — advanced features
