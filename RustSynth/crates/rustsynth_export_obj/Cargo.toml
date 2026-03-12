@@ -7,6 +7,7 @@ description = "OBJ exporter with grouping and sphere tessellation"
 [dependencies]
 rustsynth_core = { path = "../rustsynth_core" }
 rustsynth_scene = { path = "../rustsynth_scene" }
+rustsynth_render_api = { path = "../rustsynth_render_api" }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
 log = { workspace = true }

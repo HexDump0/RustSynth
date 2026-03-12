@@ -6,4 +6,5 @@
 pub mod exporter;
 pub mod template;
 
-pub use exporter::TemplateExporter;
+pub use exporter::{ExportCamera, TemplateExporter};
+pub use template::Template;

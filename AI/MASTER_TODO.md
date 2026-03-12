@@ -23,14 +23,14 @@ Selection rule: pick the first `READY` item with the lowest ID unless a task fol
 | T08 | DONE | Implement evaluator/builder core | T07 | deterministic expansion engine and scene emission |
 | T09 | DONE | Implement transformations and state parity tests | T08 | transform/state tests covering matrix, HSV, alpha, seed behavior |
 | T10 | DONE | Define canonical scene representation | T08 | renderer-agnostic scene/object model |
-| T10A | READY | Define renderer boundary and viewport API | T10 | traits/interfaces allowing Bevy, OpenGL, or `wgpu` viewport backends |
-| T11 | READY | Implement template exporter | T10 | template export backend and tests |
-| T12 | READY | Implement OBJ exporter | T10 | OBJ backend and tests |
-| T13 | READY | Decide scripting compatibility approach | T02 | decision doc: JS compatibility, Rhai, or deferred scope |
-| T14 | BLOCKED | Build GTK4 + Relm4 desktop app shell | T01, T10, T10A | app window, editor, file IO, settings shell |
+| T10A | DONE | Define renderer boundary and viewport API | T10 | traits/interfaces allowing Bevy, OpenGL, or `wgpu` viewport backends |
+| T11 | DONE | Implement template exporter | T10 | template export backend and tests |
+| T12 | DONE | Implement OBJ exporter | T10 | OBJ backend and tests |
+| T13 | DONE | Decide scripting compatibility approach | T02 | decision doc: JS compatibility, Rhai, or deferred scope |
+| T14 | READY | Build GTK4 + Relm4 desktop app shell | T01, T10, T10A | app window, editor, file IO, settings shell |
 | T15 | LATER | Prototype Bevy viewport backend | T01, T10, T10A | scene-to-Bevy viewport prototype (deferred — wgpu is the chosen path) |
 | T16 | LATER | Prototype custom OpenGL viewport backend | T01, T10, T10A | scene-to-OpenGL viewport prototype (deferred — wgpu is the chosen path) |
-| T17 | BLOCKED | Implement `wgpu` viewport backend | T01, T10, T10A | wgpu renderer via `GtkGLArea` EGL surface: geometry upload, WGSL shaders, arcball camera |
+| T17 | READY | Implement `wgpu` viewport backend | T01, T10, T10A | wgpu renderer via `GtkGLArea` EGL surface: geometry upload, WGSL shaders, arcball camera |
 | T18 | BLOCKED | Implement variable editor and parameter controls | T04, T14 | UI for preprocessor-driven variables |
 | T19 | BLOCKED | Implement camera/settings import-export | T10, T14 | camera state persistence and script insertion support |
 | T20 | BLOCKED | Integrate template export UI flow | T11, T14 | export dialog and file output flow |

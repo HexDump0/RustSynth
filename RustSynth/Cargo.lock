@@ -295,6 +295,7 @@ dependencies = [
  "log",
  "pretty_assertions",
  "rustsynth_core",
+ "rustsynth_render_api",
  "rustsynth_scene",
  "thiserror",
 ]
@@ -307,6 +308,7 @@ dependencies = [
  "log",
  "pretty_assertions",
  "rustsynth_core",
+ "rustsynth_render_api",
  "rustsynth_scene",
  "thiserror",
 ]

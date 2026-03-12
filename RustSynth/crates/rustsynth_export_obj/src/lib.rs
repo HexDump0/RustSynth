@@ -6,4 +6,4 @@
 pub mod exporter;
 pub mod tessellate;
 
-pub use exporter::ObjExporter;
+pub use exporter::{ObjExporter, ObjOutput};
