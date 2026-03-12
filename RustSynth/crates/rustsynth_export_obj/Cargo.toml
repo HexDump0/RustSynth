@@ -1,0 +1,15 @@
+[package]
+name = "rustsynth_export_obj"
+version.workspace = true
+edition.workspace = true
+description = "OBJ exporter with grouping and sphere tessellation"
+
+[dependencies]
+rustsynth_core = { path = "../rustsynth_core" }
+rustsynth_scene = { path = "../rustsynth_scene" }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+log = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }

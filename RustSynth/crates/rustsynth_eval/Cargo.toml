@@ -1,0 +1,17 @@
+[package]
+name = "rustsynth_eval"
+version.workspace = true
+edition.workspace = true
+description = "Execution engine: rule expansion, recursion modes, deterministic RNG, scene emission"
+
+[dependencies]
+rustsynth_core = { path = "../rustsynth_core" }
+rustsynth_eisenscript = { path = "../rustsynth_eisenscript" }
+rustsynth_semantics = { path = "../rustsynth_semantics" }
+rustsynth_scene = { path = "../rustsynth_scene" }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+log = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }

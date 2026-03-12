@@ -1,0 +1,19 @@
+[package]
+name = "rustsynth_viewport_gl"
+version.workspace = true
+edition.workspace = true
+description = "Optional custom OpenGL viewport backend (prototype, not yet wired)"
+
+[dependencies]
+rustsynth_core = { path = "../rustsynth_core" }
+rustsynth_scene = { path = "../rustsynth_scene" }
+rustsynth_render_api = { path = "../rustsynth_render_api" }
+anyhow = { workspace = true }
+log = { workspace = true }
+
+# OpenGL bindings will be added here once T16 begins
+# gl = "0.14"
+# glutin = "0.32"
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }

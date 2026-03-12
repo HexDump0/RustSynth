@@ -1,0 +1,16 @@
+[package]
+name = "rustsynth_scene"
+version.workspace = true
+edition.workspace = true
+description = "Canonical renderer-agnostic scene and object representation"
+
+[dependencies]
+rustsynth_core = { path = "../rustsynth_core" }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+log = { workspace = true }
+glam = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }

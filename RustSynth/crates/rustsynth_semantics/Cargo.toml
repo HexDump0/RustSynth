@@ -1,0 +1,15 @@
+[package]
+name = "rustsynth_semantics"
+version.workspace = true
+edition.workspace = true
+description = "Rule graph, name resolution, primitive lookup, and validation"
+
+[dependencies]
+rustsynth_core = { path = "../rustsynth_core" }
+rustsynth_eisenscript = { path = "../rustsynth_eisenscript" }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+log = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }

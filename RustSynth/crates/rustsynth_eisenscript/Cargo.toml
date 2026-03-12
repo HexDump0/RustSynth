@@ -1,0 +1,14 @@
+[package]
+name = "rustsynth_eisenscript"
+version.workspace = true
+edition.workspace = true
+description = "EisenScript preprocessor, lexer, parser, AST, and diagnostics"
+
+[dependencies]
+rustsynth_core = { path = "../rustsynth_core" }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+log = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }

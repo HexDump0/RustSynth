@@ -1,0 +1,7 @@
+[build]
+
+[alias]
+# Convenient alias: cargo ck  →  cargo check for all workspace crates
+ck = "check --workspace"
+# Convenient alias: cargo t  →  cargo test for all workspace crates
+t = "test --workspace"

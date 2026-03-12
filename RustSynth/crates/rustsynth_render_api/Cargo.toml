@@ -1,0 +1,16 @@
+[package]
+name = "rustsynth_render_api"
+version.workspace = true
+edition.workspace = true
+description = "Renderer boundary traits, viewport contracts, and shared adapter types"
+
+[dependencies]
+rustsynth_core = { path = "../rustsynth_core" }
+rustsynth_scene = { path = "../rustsynth_scene" }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+log = { workspace = true }
+glam = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }

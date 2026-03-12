@@ -1,0 +1,15 @@
+[package]
+name = "rustsynth_core"
+version.workspace = true
+edition.workspace = true
+description = "Shared types, errors, math helpers, IDs, and deterministic RNG for RustSynth"
+
+[dependencies]
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+log = { workspace = true }
+glam = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }

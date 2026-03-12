@@ -1,0 +1,9 @@
+# RustSynth workspace — top-level clippy configuration
+# Applied via:  cargo clippy --workspace
+[lints.rust]
+unused = "warn"
+dead_code = "warn"
+
+[lints.clippy]
+all = "warn"
+# Nursery and pedantic are too noisy at skeleton stage; enable later.
