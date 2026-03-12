@@ -30,7 +30,7 @@ Selection rule: pick the first `READY` item with the lowest ID unless a task fol
 | T14 | READY | Build GTK4 + Relm4 desktop app shell | T01, T10, T10A | app window, editor, file IO, settings shell |
 | T15 | LATER | Prototype Bevy viewport backend | T01, T10, T10A | scene-to-Bevy viewport prototype (deferred — wgpu is the chosen path) |
 | T16 | LATER | Prototype custom OpenGL viewport backend | T01, T10, T10A | scene-to-OpenGL viewport prototype (deferred — wgpu is the chosen path) |
-| T17 | READY | Implement `wgpu` viewport backend | T01, T10, T10A | wgpu renderer via `GtkGLArea` EGL surface: geometry upload, WGSL shaders, arcball camera |
+| T17 | DONE | Implement `wgpu` viewport backend | T01, T10, T10A | wgpu renderer via `GtkGLArea` EGL surface: geometry upload, WGSL shaders, arcball camera |
 | T18 | BLOCKED | Implement variable editor and parameter controls | T04, T14 | UI for preprocessor-driven variables |
 | T19 | BLOCKED | Implement camera/settings import-export | T10, T14 | camera state persistence and script insertion support |
 | T20 | BLOCKED | Integrate template export UI flow | T11, T14 | export dialog and file output flow |
