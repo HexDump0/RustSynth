@@ -11,16 +11,20 @@ use rustsynth_eval::{build, BuildConfig};
 use rustsynth_scene::Scene;
 use rustsynth_semantics::{resolve, validate};
 
+pub use rustsynth_eisenscript::preprocessor::GuiParam;
+
 /// Run the full pipeline on `source` with the given `config`.
 ///
-/// Returns the produced `Scene` and a list of warning/info strings.
+/// Returns the produced `Scene`, a list of warning/info strings, and any GUI
+/// parameters extracted from `#define` directives with type annotations.
 /// Hard parse errors are folded into the warning list; the evaluator still
 /// runs in best-effort mode on a partial graph.
-pub fn run_pipeline(source: &str, config: &BuildConfig) -> Result<(Scene, Vec<String>)> {
+pub fn run_pipeline(source: &str, config: &BuildConfig) -> Result<(Scene, Vec<String>, Vec<GuiParam>)> {
     let mut warnings: Vec<String> = Vec::new();
 
     // ── 1. Preprocess ─────────────────────────────────────────────────────────
     let pre = preprocessor::preprocess(source, config.seed);
+    let gui_params = pre.gui_params.clone();
     for d in &pre.diagnostics {
         warnings.push(format!(
             "[{}] line {}: {}",
@@ -82,5 +86,5 @@ pub fn run_pipeline(source: &str, config: &BuildConfig) -> Result<(Scene, Vec<St
     // ── 5. Evaluate ───────────────────────────────────────────────────────────
     let scene = build(&graph, config);
 
-    Ok((scene, warnings))
+    Ok((scene, warnings, gui_params))
 }

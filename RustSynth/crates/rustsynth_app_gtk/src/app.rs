@@ -21,7 +21,8 @@ use rustsynth_eval::{BuildConfig, RecursionMode};
 use rustsynth_render_api::backend::{InputEvent, PointerButton, ViewportBackend};
 use rustsynth_viewport_wgpu::WgpuBackend;
 
-use crate::{pipeline, settings_dialog, viewport};
+use crate::{camera_io, pipeline, settings_dialog, viewport};
+use rustsynth_eisenscript::preprocessor::GuiParam;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Default script shown on first launch
@@ -72,6 +73,17 @@ pub enum AppMsg {
     ExportObjPicked(PathBuf),
     ExportTemplate,
     ExportTemplatePicked(PathBuf),
+    SetTemplateFile,
+    TemplateFileSet(PathBuf),
+    ClearTemplateFile,
+    ExportCamera,
+    CameraExportPicked(PathBuf),
+    ImportCamera,
+    CameraImportPicked(PathBuf),
+    InsertCameraIntoScript,
+
+    // ── GUI parameter panel ───────────────────────────────────────────────────
+    GuiParamChanged { name: String, value: String },
 
     // ── Configuration ─────────────────────────────────────────────────────────
     ShowSettings,
@@ -114,6 +126,10 @@ pub struct AppModel {
     viewport_height: u32,
     /// Whether we need to re-render on the next update_view pass.
     needs_rerender: bool,
+    /// GUI parameters extracted from preprocessor `#define` directives.
+    gui_params: Vec<GuiParam>,
+    /// Custom template XML file path (None = use built-in template).
+    template_path: Option<PathBuf>,
 }
 
 impl AppModel {
@@ -137,6 +153,8 @@ pub struct AppWidgets {
     seed_entry: gtk::Entry,
     max_obj_spin: gtk::SpinButton,
     recursion_combo: gtk::DropDown,
+    var_panel: gtk::Box,
+    var_expander: gtk::Expander,
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -183,17 +201,69 @@ impl Component for AppModel {
         let export_section = gio::Menu::new();
         export_section.append(Some("Export OBJ…"), Some("win.export-obj"));
         export_section.append(Some("Export Template…"), Some("win.export-template"));
+        export_section.append(Some("Set Template File…"), Some("win.set-template-file"));
+        export_section.append(Some("Clear Template File"), Some("win.clear-template-file"));
         file_menu.append_section(None, &export_section);
+        let camera_section = gio::Menu::new();
+        camera_section.append(Some("Export Camera…"), Some("win.export-camera"));
+        camera_section.append(Some("Import Camera…"), Some("win.import-camera"));
+        camera_section.append(Some("Insert Camera into Script"), Some("win.insert-camera"));
+        file_menu.append_section(None, &camera_section);
 
         let menu_btn = gtk::MenuButton::builder()
-            .label("File")
+            .icon_name("open-menu-symbolic")
+            .tooltip_text("File operations")
             .menu_model(&file_menu)
             .build();
         header.pack_start(&menu_btn);
 
+        // ── Controls in Header (formerly Toolbar) ─────────────────────────────
+        
+        let controls_box = gtk::Box::builder()
+            .orientation(gtk::Orientation::Horizontal)
+            .spacing(6)
+            .css_classes(["linked"])
+            .build();
+        header.pack_start(&controls_box);
+
+        // Seed
+        let seed_entry = gtk::Entry::builder()
+            .text("0")
+            .width_chars(6)
+            .placeholder_text("Seed")
+            .tooltip_text("RNG seed")
+            .build();
+        let sender_seed = sender.input_sender().clone();
+        seed_entry.connect_activate(move |entry| {
+            sender_seed.emit(AppMsg::SeedChanged(entry.text().to_string()));
+        });
+        controls_box.append(&seed_entry);
+
+        // Max objects
+        let obj_adj = gtk::Adjustment::new(100_000.0, 1.0, 10_000_000.0, 1000.0, 10_000.0, 0.0);
+        let max_obj_spin = gtk::SpinButton::new(Some(&obj_adj), 1000.0, 0);
+        max_obj_spin.set_tooltip_text(Some("Max objects"));
+        let sender_obj = sender.input_sender().clone();
+        max_obj_spin.connect_value_changed(move |spin| {
+            sender_obj.emit(AppMsg::MaxObjectsChanged(spin.value()));
+        });
+        controls_box.append(&max_obj_spin);
+
+        // Recursion mode
+        let modes = gtk::StringList::new(&["BFS", "DFS"]);
+        let recursion_combo = gtk::DropDown::new(Some(modes), gtk::Expression::NONE);
+        recursion_combo.set_selected(0);
+        recursion_combo.set_tooltip_text(Some("Recursion mode"));
+        let sender_mode = sender.input_sender().clone();
+        recursion_combo.connect_selected_notify(move |combo| {
+            sender_mode.emit(AppMsg::RecursionModeChanged(combo.selected()));
+        });
+        controls_box.append(&recursion_combo);
+
         // Run button
         let run_btn = gtk::Button::builder()
-            .label("▶  Run")
+            .label("Run")
+            .icon_name("media-playback-start-symbolic")
             .css_classes(["suggested-action"])
             .tooltip_text("Run script (F5)")
             .build();
@@ -203,90 +273,21 @@ impl Component for AppModel {
 
         // Reset camera button
         let reset_btn = gtk::Button::builder()
-            .label("⟳ Camera")
+            .icon_name("view-refresh-symbolic")
             .tooltip_text("Reset camera")
             .build();
         let sender_reset = sender.input_sender().clone();
         reset_btn.connect_clicked(move |_| sender_reset.emit(AppMsg::ResetCamera));
         header.pack_end(&reset_btn);
 
-        // ── Toolbar ───────────────────────────────────────────────────────────
-        let toolbar = gtk::Box::builder()
-            .orientation(gtk::Orientation::Horizontal)
-            .margin_start(8)
-            .margin_end(8)
-            .margin_top(4)
-            .margin_bottom(4)
-            .spacing(8)
-            .build();
-        vbox.append(&toolbar);
-
-        // Seed
-        toolbar.append(
-            &gtk::Label::builder()
-                .label("Seed:")
-                .css_classes(["dim-label"])
-                .build(),
-        );
-        let seed_entry = gtk::Entry::builder()
-            .text("0")
-            .width_chars(8)
-            .tooltip_text("RNG seed — change to get different variants")
-            .build();
-        let sender_seed = sender.input_sender().clone();
-        seed_entry.connect_activate(move |entry| {
-            sender_seed.emit(AppMsg::SeedChanged(entry.text().to_string()));
-        });
-        toolbar.append(&seed_entry);
-
-        // Separator
-        toolbar.append(&gtk::Separator::new(gtk::Orientation::Vertical));
-
-        // Max objects
-        toolbar.append(
-            &gtk::Label::builder()
-                .label("Max objects:")
-                .css_classes(["dim-label"])
-                .build(),
-        );
-        let obj_adj = gtk::Adjustment::new(100_000.0, 1.0, 10_000_000.0, 1000.0, 10_000.0, 0.0);
-        let max_obj_spin = gtk::SpinButton::new(Some(&obj_adj), 1000.0, 0);
-        let sender_obj = sender.input_sender().clone();
-        max_obj_spin.connect_value_changed(move |spin| {
-            sender_obj.emit(AppMsg::MaxObjectsChanged(spin.value()));
-        });
-        toolbar.append(&max_obj_spin);
-
-        // Separator
-        toolbar.append(&gtk::Separator::new(gtk::Orientation::Vertical));
-
-        // Recursion mode
-        toolbar.append(
-            &gtk::Label::builder()
-                .label("Mode:")
-                .css_classes(["dim-label"])
-                .build(),
-        );
-        let modes = gtk::StringList::new(&["BFS", "DFS"]);
-        let recursion_combo = gtk::DropDown::new(Some(modes), gtk::Expression::NONE);
-        recursion_combo.set_selected(0);
-        let sender_mode = sender.input_sender().clone();
-        recursion_combo.connect_selected_notify(move |combo| {
-            sender_mode.emit(AppMsg::RecursionModeChanged(combo.selected()));
-        });
-        toolbar.append(&recursion_combo);
-
-        // Separator
-        toolbar.append(&gtk::Separator::new(gtk::Orientation::Vertical));
-
         // Settings
         let settings_btn = gtk::Button::builder()
-            .label("⚙ Settings")
-            .tooltip_text("Advanced build settings")
+            .icon_name("emblem-system-symbolic")
+            .tooltip_text("Advanced settings")
             .build();
         let sender_settings = sender.input_sender().clone();
         settings_btn.connect_clicked(move |_| sender_settings.emit(AppMsg::ShowSettings));
-        toolbar.append(&settings_btn);
+        header.pack_end(&settings_btn);
 
         // ── Main paned view ───────────────────────────────────────────────────
         let paned = gtk::Paned::builder()
@@ -296,7 +297,10 @@ impl Component for AppModel {
             .build();
         vbox.append(&paned);
 
-        // Left: code editor
+        // Left: code editor + variables panel
+        let left_vbox = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .build();
         let editor_scroll = gtk::ScrolledWindow::builder()
             .vexpand(true)
             .hexpand(true)
@@ -312,7 +316,29 @@ impl Component for AppModel {
             .build();
         text_view.buffer().set_text(DEFAULT_SCRIPT);
         editor_scroll.set_child(Some(&text_view));
-        paned.set_start_child(Some(&editor_scroll));
+        left_vbox.append(&editor_scroll);
+
+        // Variables panel — shown automatically when the script has GUI #define params
+        let var_expander = gtk::Expander::builder()
+            .label("Variables")
+            .expanded(true)
+            .visible(false)
+            .margin_start(4)
+            .margin_end(4)
+            .margin_bottom(4)
+            .build();
+        let var_panel = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .spacing(4)
+            .margin_start(4)
+            .margin_end(4)
+            .margin_top(2)
+            .margin_bottom(4)
+            .build();
+        var_expander.set_child(Some(&var_panel));
+        left_vbox.append(&var_expander);
+
+        paned.set_start_child(Some(&left_vbox));
 
         // Keep model.source in sync with the buffer
         let sender_text = sender.input_sender().clone();
@@ -323,17 +349,22 @@ impl Component for AppModel {
         });
 
         // Right: viewport picture
-        let viewport_scroll = gtk::ScrolledWindow::builder()
-            .vexpand(true)
+        // We embed the Picture directly in an Overlay to allow status overlays later.
+        // No ScrolledWindow needed for a 3D viewport that fits the area.
+        let viewport_overlay = gtk::Overlay::builder()
             .hexpand(true)
-            .min_content_width(300)
+            .vexpand(true)
             .build();
+            
         let picture = gtk::Picture::builder()
             .hexpand(true)
             .vexpand(true)
             .can_shrink(true)
+            .content_fit(gtk::ContentFit::Fill) // Ensure texture fills the widget
             .tooltip_text("Viewport — drag to orbit, right-drag to pan, scroll to zoom")
             .build();
+        viewport_overlay.set_child(Some(&picture));
+        paned.set_end_child(Some(&viewport_overlay));
 
         // Camera gesture controllers
         // Primary drag → orbit
@@ -387,9 +418,6 @@ impl Component for AppModel {
             picture.add_controller(scroll);
         }
 
-        viewport_scroll.set_child(Some(&picture));
-        paned.set_end_child(Some(&viewport_scroll));
-
         // ── Status bar ────────────────────────────────────────────────────────
         let status_label = gtk::Label::builder()
             .label("Ready — press ▶ Run (or F5) to render the script.")
@@ -436,6 +464,8 @@ impl Component for AppModel {
             viewport_width: 600,
             viewport_height: 500,
             needs_rerender: false,
+            gui_params: Vec::new(),
+            template_path: None,
         };
 
         ComponentParts {
@@ -448,6 +478,8 @@ impl Component for AppModel {
                 seed_entry,
                 max_obj_spin,
                 recursion_combo,
+                var_panel,
+                var_expander,
             },
         }
     }
@@ -469,6 +501,12 @@ impl Component for AppModel {
 
             AppMsg::Run => {
                 self.run_script();
+                Self::rebuild_var_panel(
+                    &widgets.var_expander,
+                    &widgets.var_panel,
+                    &self.gui_params,
+                    sender.input_sender(),
+                );
             }
 
             // ── File I/O ──────────────────────────────────────────────────────
@@ -504,6 +542,10 @@ impl Component for AppModel {
             AppMsg::FileOpened(path) => {
                 match std::fs::read_to_string(&path) {
                     Ok(content) => {
+                        // Restore embedded camera annotation if present
+                        if let Some(cam) = camera_io::extract_camera_annotation(&content) {
+                            *self.backend.camera_mut() = cam;
+                        }
                         widgets.text_view.buffer().set_text(&content);
                         self.source = content;
                         self.file_path = Some(path.clone());
@@ -646,7 +688,115 @@ impl Component for AppModel {
                 self.backend.handle_input(InputEvent::ResetCamera);
                 self.needs_rerender = true;
             }
+            // ── Camera I/O ────────────────────────────────────────────────────────────
+            AppMsg::ExportCamera => {
+                let dialog = gtk::FileDialog::builder()
+                    .title("Export Camera")
+                    .initial_name("camera.json")
+                    .build();
+                let filter = gtk::FileFilter::new();
+                filter.add_pattern("*.json");
+                filter.set_name(Some("Camera files (*.json)"));
+                let filters = gio::ListStore::new::<gtk::FileFilter>();
+                filters.append(&filter);
+                dialog.set_filters(Some(&filters));
+                let input = sender.input_sender().clone();
+                dialog.save(Some(root), gio::Cancellable::NONE, move |result| {
+                    if let Ok(file) = result {
+                        if let Some(path) = file.path() {
+                            input.emit(AppMsg::CameraExportPicked(path));
+                        }
+                    }
+                });
+            }
 
+            AppMsg::CameraExportPicked(path) => {
+                self.export_camera_state(&path);
+            }
+
+            AppMsg::ImportCamera => {
+                let dialog = gtk::FileDialog::builder()
+                    .title("Import Camera")
+                    .build();
+                let filter = gtk::FileFilter::new();
+                filter.add_pattern("*.json");
+                filter.set_name(Some("Camera files (*.json)"));
+                let filters = gio::ListStore::new::<gtk::FileFilter>();
+                filters.append(&filter);
+                dialog.set_filters(Some(&filters));
+                let input = sender.input_sender().clone();
+                dialog.open(Some(root), gio::Cancellable::NONE, move |result| {
+                    if let Ok(file) = result {
+                        if let Some(path) = file.path() {
+                            input.emit(AppMsg::CameraImportPicked(path));
+                        }
+                    }
+                });
+            }
+
+            AppMsg::CameraImportPicked(path) => {
+                self.import_camera_state(&path);
+                self.needs_rerender = true;
+            }
+
+            AppMsg::InsertCameraIntoScript => {
+                match camera_io::insert_camera_annotation(&self.source, self.backend.camera()) {
+                    Ok(new_source) => {
+                        self.source = new_source.clone();
+                        widgets.text_view.buffer().set_text(&new_source);
+                        self.status = "Camera state inserted into script.".into();
+                    }
+                    Err(e) => self.status = format!("Camera insert error: {e}"),
+                }
+            }
+
+            // ── GUI parameter panel ───────────────────────────────────────────────────
+            AppMsg::GuiParamChanged { name, value } => {
+                let new_source = Self::rewrite_define_value(&self.source, &name, &value);
+                if new_source != self.source {
+                    self.source = new_source.clone();
+                    let buf = widgets.text_view.buffer();
+                    let (start, end) = buf.bounds();
+                    if buf.text(&start, &end, false).as_str() != new_source {
+                        buf.set_text(&new_source);
+                    }
+                    self.status = "Variables updated — press ▶ Run (F5) to re-render.".into();
+                }
+            }
+
+            // ── Template file selection ─────────────────────────────────────────────
+            AppMsg::SetTemplateFile => {
+                let dialog = gtk::FileDialog::builder()
+                    .title("Select Template XML")
+                    .build();
+                let filter = gtk::FileFilter::new();
+                filter.add_pattern("*.xml");
+                filter.set_name(Some("Template files (*.xml)"));
+                let filters = gio::ListStore::new::<gtk::FileFilter>();
+                filters.append(&filter);
+                dialog.set_filters(Some(&filters));
+                let input = sender.input_sender().clone();
+                dialog.open(Some(root), gio::Cancellable::NONE, move |result| {
+                    if let Ok(file) = result {
+                        if let Some(path) = file.path() {
+                            input.emit(AppMsg::TemplateFileSet(path));
+                        }
+                    }
+                });
+            }
+
+            AppMsg::TemplateFileSet(path) => {
+                self.status = format!(
+                    "Template: {}",
+                    path.file_name().unwrap_or_default().to_string_lossy()
+                );
+                self.template_path = Some(path);
+            }
+
+            AppMsg::ClearTemplateFile => {
+                self.template_path = None;
+                self.status = "Template cleared — using built-in.".into();
+            }
             // ── Viewport size ─────────────────────────────────────────────────
             AppMsg::ViewportResized(w, h) => {
                 self.viewport_width = w;
@@ -698,6 +848,11 @@ impl AppModel {
             ("save-file-as", AppMsg::SaveFileAs),
             ("export-obj", AppMsg::ExportObj),
             ("export-template", AppMsg::ExportTemplate),
+            ("set-template-file", AppMsg::SetTemplateFile),
+            ("clear-template-file", AppMsg::ClearTemplateFile),
+            ("export-camera", AppMsg::ExportCamera),
+            ("import-camera", AppMsg::ImportCamera),
+            ("insert-camera", AppMsg::InsertCameraIntoScript),
             ("run", AppMsg::Run),
         ];
         for (name, msg_template) in actions {
@@ -713,6 +868,11 @@ impl AppModel {
                     "save-file-as" => AppMsg::SaveFileAs,
                     "export-obj" => AppMsg::ExportObj,
                     "export-template" => AppMsg::ExportTemplate,
+                    "set-template-file" => AppMsg::SetTemplateFile,
+                    "clear-template-file" => AppMsg::ClearTemplateFile,
+                    "export-camera" => AppMsg::ExportCamera,
+                    "import-camera" => AppMsg::ImportCamera,
+                    "insert-camera" => AppMsg::InsertCameraIntoScript,
                     "run" => AppMsg::Run,
                     _ => return,
                 };
@@ -726,7 +886,8 @@ impl AppModel {
     /// Run the current script and render the result.
     fn run_script(&mut self) {
         match pipeline::run_pipeline(&self.source, &self.config) {
-            Ok((scene, warnings)) => {
+            Ok((scene, warnings, gui_params)) => {
+                self.gui_params = gui_params;
                 self.object_count = scene.objects.len();
 
                 match viewport::render_scene_to_texture(
@@ -780,7 +941,7 @@ impl AppModel {
     /// Export the current scene as OBJ to `path`.
     fn export_obj(&mut self, path: &PathBuf) {
         match pipeline::run_pipeline(&self.source, &self.config) {
-            Ok((scene, _)) => {
+            Ok((scene, _, _)) => {
                 use rustsynth_export_obj::ObjExporter;
                 let exporter = ObjExporter::default();
                 match exporter.export(&scene) {
@@ -808,11 +969,11 @@ impl AppModel {
 
     /// Export the current scene as a template to `path`.
     ///
-    /// Uses a minimal built-in plain-text template.  For production use, the
-    /// user would select a template XML file first (a future enhancement).
+    /// Uses the custom template XML set via `SetTemplateFile` if one is
+    /// configured, otherwise falls back to the built-in plain-text template.
     fn export_template(&mut self, path: &PathBuf) {
         use rustsynth_export_template::{Template, TemplateExporter};
-        // Minimal built-in template that outputs a human-readable object list.
+        // Built-in minimal template — outputs a human-readable object list.
         const BUILTIN_TEMPLATE_XML: &str = r#"<template name="TextDump"
             defaultExtension="Text file (*.txt)">
             <primitive name="begin">// RustSynth scene export\n// Objects:\n</primitive>
@@ -824,17 +985,35 @@ impl AppModel {
             <primitive name="grid">grid {matrix}\n</primitive>
             <primitive name="end">// end\n</primitive>
         </template>"#;
+        // Load template XML: custom file if set, otherwise the built-in.
+        let template_xml = match &self.template_path {
+            Some(tmpl_path) => match std::fs::read_to_string(tmpl_path) {
+                Ok(xml) => xml,
+                Err(e) => {
+                    self.status = format!("Failed to read template file: {e}");
+                    return;
+                }
+            },
+            None => BUILTIN_TEMPLATE_XML.to_string(),
+        };
         match pipeline::run_pipeline(&self.source, &self.config) {
-            Ok((scene, _)) => {
-                match Template::from_xml(BUILTIN_TEMPLATE_XML) {
+            Ok((scene, _, _)) => {
+                match Template::from_xml(&template_xml) {
                     Ok(template) => {
                         let mut exporter = TemplateExporter::new(template);
                         match exporter.export(&scene) {
                             Ok(text) => match std::fs::write(path, text) {
                                 Ok(()) => {
+                                    let tmpl_name = self
+                                        .template_path
+                                        .as_ref()
+                                        .and_then(|p| p.file_name())
+                                        .map(|n| n.to_string_lossy().into_owned())
+                                        .unwrap_or_else(|| "built-in".to_string());
                                     self.status = format!(
-                                        "Template exported: {}",
-                                        path.file_name().unwrap_or_default().to_string_lossy()
+                                        "Template exported: {} (template: {})",
+                                        path.file_name().unwrap_or_default().to_string_lossy(),
+                                        tmpl_name
                                     );
                                 }
                                 Err(e) => self.status = format!("Template write error: {e}"),
@@ -842,10 +1021,191 @@ impl AppModel {
                             Err(e) => self.status = format!("Template export error: {e}"),
                         }
                     }
-                    Err(e) => self.status = format!("Internal template error: {e}"),
+                    Err(e) => self.status = format!("Template parse error: {e}"),
                 }
             }
             Err(e) => self.status = format!("Script error during export: {e}"),
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // T18 — Variable editor helpers
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /// Rewrite a `#define NAME value [gui-metadata]` line in `source` with a new value.
+    ///
+    /// The GUI type annotation `(float:lo-hi)` or `(int:lo-hi)` at the end of
+    /// the line is preserved so the slider range survives re-runs.
+    fn rewrite_define_value(source: &str, name: &str, new_value: &str) -> String {
+        let prefix = format!("#define {} ", name);
+        source
+            .lines()
+            .map(|line| {
+                if let Some(rest) = line.strip_prefix(&prefix) {
+                    // Preserve optional GUI annotation after the value
+                    let meta = if let Some(idx) = rest.find(" (") {
+                        &rest[idx..]
+                    } else {
+                        ""
+                    };
+                    format!("{}{}{}", prefix, new_value, meta)
+                } else {
+                    line.to_string()
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    /// Clear and rebuild the variable panel from the current `gui_params`.
+    ///
+    /// Shows the `expander` when there are params, hides it when there are none.
+    fn rebuild_var_panel(
+        expander: &gtk::Expander,
+        panel: &gtk::Box,
+        gui_params: &[GuiParam],
+        sender: &relm4::Sender<AppMsg>,
+    ) {
+        // Remove all existing rows
+        while let Some(child) = panel.first_child() {
+            panel.remove(&child);
+        }
+        if gui_params.is_empty() {
+            expander.set_visible(false);
+            return;
+        }
+        expander.set_visible(true);
+        expander.set_label(Some(&format!("Variables ({})", gui_params.len())));
+
+        for param in gui_params {
+            let row = gtk::Box::builder()
+                .orientation(gtk::Orientation::Horizontal)
+                .spacing(6)
+                .margin_start(2)
+                .margin_end(2)
+                .build();
+            let lbl_text = match param {
+                GuiParam::Float { name, .. } | GuiParam::Int { name, .. } => name.as_str(),
+            };
+            let label = gtk::Label::builder()
+                .label(lbl_text)
+                .width_chars(14)
+                .xalign(0.0)
+                .build();
+            row.append(&label);
+
+            match param {
+                GuiParam::Float { name, default, min, max } => {
+                    let step = (*max - *min) / 100.0;
+                    let adj = gtk::Adjustment::new(*default, *min, *max, step.max(0.0001), step.max(0.001) * 10.0, 0.0);
+                    let scale = gtk::Scale::builder()
+                        .orientation(gtk::Orientation::Horizontal)
+                        .adjustment(&adj)
+                        .hexpand(true)
+                        .draw_value(true)
+                        .value_pos(gtk::PositionType::Right)
+                        .build();
+                    scale.set_digits(4);
+                    let name_clone = name.clone();
+                    let sender_clone = sender.clone();
+                    scale.connect_value_changed(move |s| {
+                        sender_clone.emit(AppMsg::GuiParamChanged {
+                            name: name_clone.clone(),
+                            value: format!("{:.6}", s.value()),
+                        });
+                    });
+                    row.append(&scale);
+                }
+                GuiParam::Int { name, default, min, max } => {
+                    let adj = gtk::Adjustment::new(
+                        *default as f64, *min as f64, *max as f64, 1.0, 10.0, 0.0,
+                    );
+                    let spin = gtk::SpinButton::builder()
+                        .adjustment(&adj)
+                        .climb_rate(1.0)
+                        .digits(0)
+                        .hexpand(true)
+                        .build();
+                    let name_clone = name.clone();
+                    let sender_clone = sender.clone();
+                    spin.connect_value_changed(move |s| {
+                        sender_clone.emit(AppMsg::GuiParamChanged {
+                            name: name_clone.clone(),
+                            value: format!("{}", s.value() as i64),
+                        });
+                    });
+                    row.append(&spin);
+                }
+            }
+            panel.append(&row);
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // T19 — Camera I/O helpers
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /// Serialize the active camera to a JSON file.
+    fn export_camera_state(&mut self, path: &PathBuf) {
+        match camera_io::save_camera(self.backend.camera(), path) {
+            Ok(()) => {
+                self.status = format!(
+                    "Camera exported: {}",
+                    path.file_name().unwrap_or_default().to_string_lossy()
+                );
+            }
+            Err(e) => self.status = format!("Camera export error: {e}"),
+        }
+    }
+
+    /// Deserialize a camera from a JSON file and apply it to the backend.
+    fn import_camera_state(&mut self, path: &PathBuf) {
+        match camera_io::load_camera(path) {
+            Ok(cam) => {
+                *self.backend.camera_mut() = cam;
+                self.status = format!(
+                    "Camera imported: {}",
+                    path.file_name().unwrap_or_default().to_string_lossy()
+                );
+            }
+            Err(e) => self.status = format!("Camera import error: {e}"),
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Unit tests
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::AppModel;
+
+    #[test]
+    fn rewrite_plain_define() {
+        let src = "#define BRANCHANGLE 4\nset maxdepth 200";
+        let result = AppModel::rewrite_define_value(src, "BRANCHANGLE", "7.5");
+        assert_eq!(result, "#define BRANCHANGLE 7.5\nset maxdepth 200");
+    }
+
+    #[test]
+    fn rewrite_gui_define_preserves_metadata() {
+        let src = "#define BRANCHANGLE 4 (float:1.0-15.0)\nset maxdepth 200";
+        let result = AppModel::rewrite_define_value(src, "BRANCHANGLE", "9");
+        assert_eq!(result, "#define BRANCHANGLE 9 (float:1.0-15.0)\nset maxdepth 200");
+    }
+
+    #[test]
+    fn rewrite_define_noop_when_name_absent() {
+        let src = "#define OTHER 4\nset maxdepth 200";
+        let result = AppModel::rewrite_define_value(src, "BRANCHANGLE", "9");
+        assert_eq!(result, src);
+    }
+
+    #[test]
+    fn rewrite_int_define_preserves_metadata() {
+        let src = "#define MAXREC 9 (int:1-20)\nsome rule {}";
+        let result = AppModel::rewrite_define_value(src, "MAXREC", "15");
+        assert_eq!(result, "#define MAXREC 15 (int:1-20)\nsome rule {}");
     }
 }

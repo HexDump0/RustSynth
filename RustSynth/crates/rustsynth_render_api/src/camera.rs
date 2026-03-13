@@ -4,11 +4,12 @@
 //! backend and shared across any future backends.
 
 use rustsynth_core::math::{Mat4, Vec3};
+use serde::{Deserialize, Serialize};
 
 /// Arcball orbit camera that wraps around a pivot point.
 ///
 /// All angles are in **degrees**. Distance is in world units.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ArcballCamera {
     /// Point the camera orbits around.
     pub pivot: Vec3,

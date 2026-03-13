@@ -31,9 +31,9 @@ Selection rule: pick the first `READY` item with the lowest ID unless a task fol
 | T15 | LATER | Prototype Bevy viewport backend | T01, T10, T10A | scene-to-Bevy viewport prototype (deferred — wgpu is the chosen path) |
 | T16 | LATER | Prototype custom OpenGL viewport backend | T01, T10, T10A | scene-to-OpenGL viewport prototype (deferred — wgpu is the chosen path) |
 | T17 | DONE | Implement `wgpu` viewport backend | T01, T10, T10A | wgpu renderer via `GtkGLArea` EGL surface: geometry upload, WGSL shaders, arcball camera |
-| T18 | READY | Implement variable editor and parameter controls | T04, T14 | UI for preprocessor-driven variables |
-| T19 | READY | Implement camera/settings import-export | T10, T14 | camera state persistence and script insertion support |
-| T20 | READY | Integrate template export UI flow | T11, T14 | export dialog and file output flow |
+| T18 | DONE | Implement variable editor and parameter controls | T04, T14 | UI for preprocessor-driven variables |
+| T19 | DONE | Implement camera/settings import-export | T10, T14 | camera state persistence and script insertion support |
+| T20 | DONE | Integrate template export UI flow | T11, T14 | export dialog and file output flow |
 | T21 | READY | Integrate OBJ export UI flow | T12, T14 | export dialog and file output flow |
 | T22 | BLOCKED | Decide raytracer strategy for v1 | T02, T10, T10A | decision doc: reimplement, replace, or defer |
 | T23 | READY | Port examples and gallery workflow | T14 | example browser/import path and curated sample set |

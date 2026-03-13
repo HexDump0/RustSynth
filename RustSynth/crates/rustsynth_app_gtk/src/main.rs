@@ -3,6 +3,7 @@
 //! Entry point: creates a `RelmApp` and launches the `AppModel` component.
 
 mod app;
+mod camera_io;
 mod pipeline;
 mod settings_dialog;
 mod viewport;
