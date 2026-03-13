@@ -66,6 +66,11 @@ pub struct WgpuBackend {
     /// Optional: an `wgpu::Instance` can be provided externally for
     /// integration with GtkGLArea.  If `None`, `init` creates one.
     instance: Option<wgpu::Instance>,
+    /// Texture format used when creating the render pipeline.
+    ///
+    /// Default: `Rgba8Unorm` (suitable for offscreen → CPU readback).
+    /// Set to `Bgra8UnormSrgb` before `init()` for GtkGLArea EGL integration.
+    surface_format: wgpu::TextureFormat,
 }
 
 impl Default for WgpuBackend {
@@ -76,6 +81,10 @@ impl Default for WgpuBackend {
 
 impl WgpuBackend {
     /// Create a new backend with default camera and no GPU resources.
+    ///
+    /// The default surface format is `Rgba8Unorm`, which is compatible with
+    /// offscreen CPU-readback rendering.  For GtkGLArea EGL integration,
+    /// call [`set_surface_format`] with `Bgra8UnormSrgb` before [`init`].
     pub fn new() -> Self {
         Self {
             camera: ArcballCamera::default(),
@@ -90,7 +99,16 @@ impl WgpuBackend {
             gpu: None,
             scene_bufs: None,
             instance: None,
+            surface_format: wgpu::TextureFormat::Rgba8Unorm,
         }
+    }
+
+    /// Override the surface / pipeline texture format.
+    ///
+    /// Must be called **before** `init()`.  Has no effect if the backend is
+    /// already initialised.
+    pub fn set_surface_format(&mut self, format: wgpu::TextureFormat) {
+        self.surface_format = format;
     }
 
     /// Set the background clear colour (e.g. from `scene.background`).
@@ -212,6 +230,122 @@ impl WgpuBackend {
         Ok(())
     }
 
+    /// Render the current scene to a CPU-readable pixel buffer.
+    ///
+    /// Creates an offscreen texture of `width × height` using the
+    /// backend's `surface_format`, renders into it, then copies the pixels
+    /// to a `Vec<u8>` (one byte per channel, RGBA order for `Rgba8Unorm`).
+    ///
+    /// Calls [`resize`] first so the depth buffer matches the requested
+    /// dimensions.  Requires the backend to be initialised.
+    pub fn render_to_pixels(&mut self, width: u32, height: u32) -> Result<Vec<u8>> {
+        // Resize the depth texture to match the requested dimensions.
+        self.resize(width, height);
+
+        let fmt = self.surface_format;
+
+        // Phase 1: create the offscreen render texture.
+        let (texture, view) = {
+            let gpu = self.gpu.as_ref().context("render_to_pixels: GPU not initialised")?;
+            let texture = gpu.device.create_texture(&wgpu::TextureDescriptor {
+                label: Some("offscreen_render_texture"),
+                size: wgpu::Extent3d {
+                    width,
+                    height,
+                    depth_or_array_layers: 1,
+                },
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: wgpu::TextureDimension::D2,
+                format: fmt,
+                usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+                    | wgpu::TextureUsages::COPY_SRC,
+                view_formats: &[],
+            });
+            let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+            (texture, view)
+        };
+
+        // Phase 2: render the scene into the offscreen texture.
+        self.render_to_view(&view)?;
+
+        // Phase 3: copy the texture pixels to a readback buffer.
+        //
+        // wgpu requires bytes_per_row to be a multiple of
+        // COPY_BYTES_PER_ROW_ALIGNMENT (256).
+        let bytes_per_pixel = 4u32;
+        let unaligned_stride = width * bytes_per_pixel;
+        let aligned_stride = (unaligned_stride + wgpu::COPY_BYTES_PER_ROW_ALIGNMENT - 1)
+            & !(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT - 1);
+
+        let readback_buf = {
+            let gpu = self.gpu.as_ref().unwrap();
+            gpu.device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("offscreen_readback_buffer"),
+                size: (aligned_stride * height) as u64,
+                usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+                mapped_at_creation: false,
+            })
+        };
+
+        {
+            let gpu = self.gpu.as_ref().unwrap();
+            let mut encoder =
+                gpu.device
+                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                        label: Some("readback_encoder"),
+                    });
+            encoder.copy_texture_to_buffer(
+                wgpu::TexelCopyTextureInfo {
+                    texture: &texture,
+                    mip_level: 0,
+                    origin: wgpu::Origin3d::ZERO,
+                    aspect: wgpu::TextureAspect::All,
+                },
+                wgpu::TexelCopyBufferInfo {
+                    buffer: &readback_buf,
+                    layout: wgpu::TexelCopyBufferLayout {
+                        offset: 0,
+                        bytes_per_row: Some(aligned_stride),
+                        rows_per_image: Some(height),
+                    },
+                },
+                wgpu::Extent3d {
+                    width,
+                    height,
+                    depth_or_array_layers: 1,
+                },
+            );
+            gpu.queue.submit(std::iter::once(encoder.finish()));
+        }
+
+        // Phase 4: map the readback buffer and extract rows.
+        let slice = readback_buf.slice(..);
+        let (tx, rx) = std::sync::mpsc::channel();
+        slice.map_async(wgpu::MapMode::Read, move |res| {
+            let _ = tx.send(res);
+        });
+        {
+            let gpu = self.gpu.as_ref().unwrap();
+            gpu.device.poll(wgpu::Maintain::Wait);
+        }
+        rx.recv()
+            .context("render_to_pixels: map_async channel closed")?
+            .context("render_to_pixels: map_async failed")?;
+
+        let mapped = slice.get_mapped_range();
+        let mut pixels = Vec::with_capacity((width * height * bytes_per_pixel) as usize);
+        for row in 0..height {
+            let start = (row * aligned_stride) as usize;
+            let end = start + unaligned_stride as usize;
+            pixels.extend_from_slice(&mapped[start..end]);
+        }
+        drop(mapped);
+        readback_buf.unmap();
+
+        Ok(pixels)
+    }
+
     /// Get a reference to the wgpu device (for GtkGLArea integration).
     pub fn device(&self) -> Option<&wgpu::Device> {
         self.gpu.as_ref().map(|g| &g.device)
@@ -257,7 +391,7 @@ impl ViewportBackend for WgpuBackend {
         ))
         .context("Failed to create wgpu device")?;
 
-        let surface_format = wgpu::TextureFormat::Bgra8UnormSrgb;
+        let surface_format = self.surface_format;
 
         let pipe = Pipeline::new(&device, surface_format);
 

@@ -4,6 +4,10 @@ version.workspace = true
 edition.workspace = true
 description = "GTK4 + Relm4 desktop application shell"
 
+[[bin]]
+name = "rustsynth"
+path = "src/main.rs"
+
 [dependencies]
 rustsynth_core = { path = "../rustsynth_core" }
 rustsynth_eisenscript = { path = "../rustsynth_eisenscript" }
@@ -11,15 +15,14 @@ rustsynth_semantics = { path = "../rustsynth_semantics" }
 rustsynth_eval = { path = "../rustsynth_eval" }
 rustsynth_scene = { path = "../rustsynth_scene" }
 rustsynth_render_api = { path = "../rustsynth_render_api" }
+rustsynth_viewport_wgpu = { path = "../rustsynth_viewport_wgpu" }
 rustsynth_export_template = { path = "../rustsynth_export_template" }
 rustsynth_export_obj = { path = "../rustsynth_export_obj" }
 anyhow = { workspace = true }
 log = { workspace = true }
 env_logger = { workspace = true }
-
-# GTK4 + Relm4 will be added here once T14 begins
-# gtk4 = "0.9"
-# relm4 = "0.9"
+gtk4 = { workspace = true }
+relm4 = { workspace = true }
 
 [dev-dependencies]
 pretty_assertions = { workspace = true }

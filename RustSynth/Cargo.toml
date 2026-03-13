@@ -39,6 +39,10 @@ env_logger = "0.11"
 # Math
 glam = { version = "0.29", features = ["serde"] }
 
+# GUI
+gtk4 = { version = "0.10", features = ["v4_10"] }
+relm4 = "0.10"
+
 # Testing utilities
 pretty_assertions = "1"
 

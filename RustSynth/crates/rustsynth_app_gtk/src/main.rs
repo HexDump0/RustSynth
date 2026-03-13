@@ -1,11 +1,15 @@
-//! `rustsynth_app_gtk` — GTK4 + Relm4 desktop application shell.
+//! RustSynth — GTK4 + Relm4 desktop application.
 //!
-//! Owns the editor, panes, dialogs, menus, settings, and orchestration of the
-//! headless core plus whichever viewport backend is selected at runtime.
-//!
-//! GTK4 / Relm4 dependencies are commented out until T14 begins.
+//! Entry point: creates a `RelmApp` and launches the `AppModel` component.
+
+mod app;
+mod pipeline;
+mod settings_dialog;
+mod viewport;
 
 fn main() {
     env_logger::init();
-    log::info!("RustSynth app shell placeholder — GTK4 + Relm4 will be wired in T14");
+    log::info!("RustSynth starting");
+    let app = relm4::RelmApp::new("io.rustsynth.app");
+    app.run::<app::AppModel>(());
 }

@@ -27,17 +27,17 @@ Selection rule: pick the first `READY` item with the lowest ID unless a task fol
 | T11 | DONE | Implement template exporter | T10 | template export backend and tests |
 | T12 | DONE | Implement OBJ exporter | T10 | OBJ backend and tests |
 | T13 | DONE | Decide scripting compatibility approach | T02 | decision doc: JS compatibility, Rhai, or deferred scope |
-| T14 | READY | Build GTK4 + Relm4 desktop app shell | T01, T10, T10A | app window, editor, file IO, settings shell |
+| T14 | DONE | Build GTK4 + Relm4 desktop app shell | T01, T10, T10A | app window, editor, file IO, settings shell |
 | T15 | LATER | Prototype Bevy viewport backend | T01, T10, T10A | scene-to-Bevy viewport prototype (deferred — wgpu is the chosen path) |
 | T16 | LATER | Prototype custom OpenGL viewport backend | T01, T10, T10A | scene-to-OpenGL viewport prototype (deferred — wgpu is the chosen path) |
 | T17 | DONE | Implement `wgpu` viewport backend | T01, T10, T10A | wgpu renderer via `GtkGLArea` EGL surface: geometry upload, WGSL shaders, arcball camera |
-| T18 | BLOCKED | Implement variable editor and parameter controls | T04, T14 | UI for preprocessor-driven variables |
-| T19 | BLOCKED | Implement camera/settings import-export | T10, T14 | camera state persistence and script insertion support |
-| T20 | BLOCKED | Integrate template export UI flow | T11, T14 | export dialog and file output flow |
-| T21 | BLOCKED | Integrate OBJ export UI flow | T12, T14 | export dialog and file output flow |
+| T18 | READY | Implement variable editor and parameter controls | T04, T14 | UI for preprocessor-driven variables |
+| T19 | READY | Implement camera/settings import-export | T10, T14 | camera state persistence and script insertion support |
+| T20 | READY | Integrate template export UI flow | T11, T14 | export dialog and file output flow |
+| T21 | READY | Integrate OBJ export UI flow | T12, T14 | export dialog and file output flow |
 | T22 | BLOCKED | Decide raytracer strategy for v1 | T02, T10, T10A | decision doc: reimplement, replace, or defer |
-| T23 | BLOCKED | Port examples and gallery workflow | T14 | example browser/import path and curated sample set |
-| T24 | BLOCKED | End-to-end parity regression suite | T08, T11, T12, T14 | golden tests and parity report |
+| T23 | READY | Port examples and gallery workflow | T14 | example browser/import path and curated sample set |
+| T24 | READY | End-to-end parity regression suite | T08, T11, T12, T14 | golden tests and parity report |
 | T25 | BLOCKED | Performance profiling and optimization pass | T17, T24 | profiling notes and targeted fixes |
 | T26 | BLOCKED | Packaging, docs, and v1 release prep | T24 | user docs, build docs, release checklist |
 
