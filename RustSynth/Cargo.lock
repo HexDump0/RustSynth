@@ -1303,6 +1303,7 @@ dependencies = [
  "gtk4",
  "log",
  "pretty_assertions",
+ "regex",
  "relm4",
  "rustsynth_core",
  "rustsynth_eisenscript",

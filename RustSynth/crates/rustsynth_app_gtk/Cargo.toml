@@ -23,6 +23,7 @@ log = { workspace = true }
 env_logger = { workspace = true }
 gtk4 = { workspace = true }
 relm4 = { workspace = true }
+regex = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 

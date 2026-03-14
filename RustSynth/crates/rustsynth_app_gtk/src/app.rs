@@ -14,6 +14,7 @@
 use std::path::PathBuf;
 
 use anyhow::Result;
+use regex::Regex;
 use relm4::gtk::gio;
 use relm4::gtk::prelude::*;
 use relm4::{gtk, Component, ComponentParts, ComponentSender};
@@ -49,6 +50,13 @@ rule R2 {
 }
 "#;
 
+const AUTOCOMPLETE_KEYWORDS: &[&str] = &[
+    "set", "rule", "box", "sphere", "cylinder", "line", "dot", "grid", "triangle",
+    "x", "y", "z", "s", "rx", "ry", "rz", "hue", "sat", "b", "a", "alpha",
+    "minsize", "maxdepth", "maxobjects", "background", "seed", "translation", "rotation",
+    "pivot", "scale", "camera", "if", "else",
+];
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Messages
 // ─────────────────────────────────────────────────────────────────────────────
@@ -59,6 +67,8 @@ pub enum AppMsg {
     // ── Script management ─────────────────────────────────────────────────────
     Run,
     ScriptChanged(String),
+    TriggerAutocomplete,
+    FrameTick,
 
     // ── File I/O ──────────────────────────────────────────────────────────────
     NewFile,
@@ -130,6 +140,8 @@ pub struct AppModel {
     gui_params: Vec<GuiParam>,
     /// Custom template XML file path (None = use built-in template).
     template_path: Option<PathBuf>,
+    /// Console/log output shown in the right-side Console tab.
+    console_output: String,
 }
 
 impl AppModel {
@@ -137,6 +149,94 @@ impl AppModel {
         let w = self.viewport_width.max(64);
         let h = self.viewport_height.max(64);
         viewport::render_scene_to_texture_no_reload(&mut self.backend, w, h)
+    }
+
+    fn apply_editor_highlighting(buffer: &gtk::TextBuffer) {
+        let table = buffer.tag_table();
+        if table.lookup("es-keyword").is_none() {
+            let tag = gtk::TextTag::builder()
+                .name("es-keyword")
+                .foreground("#8aadf4")
+                .weight(700)
+                .build();
+            table.add(&tag);
+        }
+        if table.lookup("es-number").is_none() {
+            let tag = gtk::TextTag::builder()
+                .name("es-number")
+                .foreground("#f5a97f")
+                .build();
+            table.add(&tag);
+        }
+        if table.lookup("es-comment").is_none() {
+            let tag = gtk::TextTag::builder()
+                .name("es-comment")
+                .foreground("#6e738d")
+                .style(gtk::pango::Style::Italic)
+                .build();
+            table.add(&tag);
+        }
+
+        let (start, end) = buffer.bounds();
+        let text = buffer.text(&start, &end, false).to_string();
+        buffer.remove_all_tags(&start, &end);
+
+        let keyword_re = Regex::new(r"\b(set|rule|box|sphere|cylinder|line|dot|grid|triangle|if|else)\b").ok();
+        let number_re = Regex::new(r"(?m)(?<![A-Za-z_])[-+]?[0-9]*\.?[0-9]+(?![A-Za-z_])").ok();
+        let comment_re = Regex::new(r"(?m)//.*$").ok();
+
+        let apply_matches = |re: &Regex, tag_name: &str| {
+            for m in re.find_iter(&text) {
+                let start_char = text[..m.start()].chars().count() as i32;
+                let end_char = text[..m.end()].chars().count() as i32;
+                let it_start = buffer.iter_at_offset(start_char);
+                let it_end = buffer.iter_at_offset(end_char);
+                buffer.apply_tag_by_name(tag_name, &it_start, &it_end);
+            }
+        };
+
+        if let Some(re) = keyword_re.as_ref() {
+            apply_matches(re, "es-keyword");
+        }
+        if let Some(re) = number_re.as_ref() {
+            apply_matches(re, "es-number");
+        }
+        if let Some(re) = comment_re.as_ref() {
+            apply_matches(re, "es-comment");
+        }
+    }
+
+    fn autocomplete_current_word(buffer: &gtk::TextBuffer) -> bool {
+        let cursor_offset = buffer.cursor_position();
+        let end = buffer.iter_at_offset(cursor_offset);
+        let mut start = end;
+        if !start.starts_word() {
+            start.backward_word_start();
+        }
+        let prefix = buffer.text(&start, &end, false).to_string();
+        if prefix.trim().is_empty() {
+            return false;
+        }
+
+        let lower = prefix.to_lowercase();
+        let mut matches: Vec<&str> = AUTOCOMPLETE_KEYWORDS
+            .iter()
+            .copied()
+            .filter(|kw| kw.starts_with(&lower) && *kw != lower)
+            .collect();
+
+        if matches.is_empty() {
+            return false;
+        }
+        matches.sort_unstable();
+        let replacement = matches[0];
+
+        let mut del_start = start;
+        let mut del_end = end;
+        buffer.delete(&mut del_start, &mut del_end);
+        let mut insert_at = buffer.iter_at_offset(cursor_offset - prefix.chars().count() as i32);
+        buffer.insert(&mut insert_at, replacement);
+        true
     }
 }
 
@@ -149,6 +249,7 @@ pub struct AppWidgets {
     window: gtk::ApplicationWindow,
     text_view: gtk::TextView,
     picture: gtk::Picture,
+    console_view: gtk::TextView,
     status_label: gtk::Label,
     seed_entry: gtk::Entry,
     max_obj_spin: gtk::SpinButton,
@@ -312,9 +413,10 @@ impl Component for AppModel {
             .right_margin(8)
             .top_margin(8)
             .bottom_margin(8)
-            .tooltip_text("EisenScript editor")
+            .tooltip_text("EisenScript editor — Ctrl+Space or Tab for autocomplete")
             .build();
         text_view.buffer().set_text(DEFAULT_SCRIPT);
+        Self::apply_editor_highlighting(&text_view.buffer());
         editor_scroll.set_child(Some(&text_view));
         left_vbox.append(&editor_scroll);
 
@@ -345,12 +447,58 @@ impl Component for AppModel {
         text_view.buffer().connect_changed(move |buf| {
             let (start, end) = buf.bounds();
             let text = buf.text(&start, &end, false).to_string();
+            AppModel::apply_editor_highlighting(buf);
             sender_text.emit(AppMsg::ScriptChanged(text));
         });
 
-        // Right: viewport picture
-        // We embed the Picture directly in an Overlay to allow status overlays later.
-        // No ScrolledWindow needed for a 3D viewport that fits the area.
+        // Ctrl+Space or Tab → autocomplete current token.
+        {
+            let key = gtk::EventControllerKey::new();
+            let sender_auto = sender.input_sender().clone();
+            key.connect_key_pressed(move |_, key, _code, state| {
+                if key == gtk::gdk::Key::space
+                    && state.contains(gtk::gdk::ModifierType::CONTROL_MASK)
+                {
+                    sender_auto.emit(AppMsg::TriggerAutocomplete);
+                    return gtk::glib::Propagation::Stop;
+                }
+                if key == gtk::gdk::Key::Tab {
+                    sender_auto.emit(AppMsg::TriggerAutocomplete);
+                    return gtk::glib::Propagation::Stop;
+                }
+                gtk::glib::Propagation::Proceed
+            });
+            text_view.add_controller(key);
+        }
+
+        // Right: split nav + content stack (Viewport / Console)
+        let right_vbox = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .hexpand(true)
+            .vexpand(true)
+            .build();
+        let right_navbar = gtk::Box::builder()
+            .orientation(gtk::Orientation::Horizontal)
+            .spacing(8)
+            .margin_start(8)
+            .margin_end(8)
+            .margin_top(8)
+            .margin_bottom(4)
+            .build();
+
+        let right_stack = gtk::Stack::builder()
+            .hexpand(true)
+            .vexpand(true)
+            .transition_type(gtk::StackTransitionType::Crossfade)
+            .build();
+
+        let switcher = gtk::StackSwitcher::builder()
+            .stack(&right_stack)
+            .build();
+        right_navbar.append(&switcher);
+        right_vbox.append(&right_navbar);
+
+        // Viewport page
         let viewport_overlay = gtk::Overlay::builder()
             .hexpand(true)
             .vexpand(true)
@@ -364,7 +512,28 @@ impl Component for AppModel {
             .tooltip_text("Viewport — drag to orbit, right-drag to pan, scroll to zoom")
             .build();
         viewport_overlay.set_child(Some(&picture));
-        paned.set_end_child(Some(&viewport_overlay));
+        right_stack.add_titled(&viewport_overlay, Some("viewport"), "Viewport");
+
+        // Console page
+        let console_scroll = gtk::ScrolledWindow::builder()
+            .hexpand(true)
+            .vexpand(true)
+            .build();
+        let console_view = gtk::TextView::builder()
+            .editable(false)
+            .monospace(true)
+            .left_margin(8)
+            .right_margin(8)
+            .top_margin(8)
+            .bottom_margin(8)
+            .cursor_visible(false)
+            .build();
+        console_view.buffer().set_text("RustSynth console ready.\n");
+        console_scroll.set_child(Some(&console_view));
+        right_stack.add_titled(&console_scroll, Some("console"), "Console");
+
+        right_vbox.append(&right_stack);
+        paned.set_end_child(Some(&right_vbox));
 
         // Camera gesture controllers
         // Primary drag → orbit
@@ -443,6 +612,16 @@ impl Component for AppModel {
         shortcut_ctrl.add_shortcut(shortcut_run);
         root.add_controller(shortcut_ctrl);
 
+        // Frame tick (about 60Hz): coalesces camera/resize rerenders so
+        // viewport interaction feels smoother and more native.
+        {
+            let tick_sender = sender.input_sender().clone();
+            root.add_tick_callback(move |_, _| {
+                tick_sender.emit(AppMsg::FrameTick);
+                gtk::glib::ControlFlow::Continue
+            });
+        }
+
         // ── Initialise backend ────────────────────────────────────────────────
         let mut backend = WgpuBackend::new();
         let status = match backend.init() {
@@ -466,6 +645,7 @@ impl Component for AppModel {
             needs_rerender: false,
             gui_params: Vec::new(),
             template_path: None,
+            console_output: "RustSynth console ready.\n".to_string(),
         };
 
         ComponentParts {
@@ -474,6 +654,7 @@ impl Component for AppModel {
                 window: root,
                 text_view,
                 picture,
+                console_view,
                 status_label,
                 seed_entry,
                 max_obj_spin,
@@ -497,6 +678,37 @@ impl Component for AppModel {
             // ── Script ────────────────────────────────────────────────────────
             AppMsg::ScriptChanged(text) => {
                 self.source = text;
+            }
+
+            AppMsg::TriggerAutocomplete => {
+                if Self::autocomplete_current_word(&widgets.text_view.buffer()) {
+                    let buf = widgets.text_view.buffer();
+                    let (start, end) = buf.bounds();
+                    self.source = buf.text(&start, &end, false).to_string();
+                    self.status = "Autocomplete applied".into();
+                } else {
+                    self.status = "No autocomplete suggestion".into();
+                }
+            }
+
+            AppMsg::FrameTick => {
+                let w = widgets.picture.allocated_width().max(1) as u32;
+                let h = widgets.picture.allocated_height().max(1) as u32;
+                if w != self.viewport_width || h != self.viewport_height {
+                    self.viewport_width = w;
+                    self.viewport_height = h;
+                    if self.last_texture.is_some() {
+                        self.needs_rerender = true;
+                    }
+                }
+
+                if self.needs_rerender && self.last_texture.is_some() {
+                    self.needs_rerender = false;
+                    match self.render_viewport() {
+                        Ok(tex) => self.last_texture = Some(tex),
+                        Err(e) => log::warn!("Re-render after camera move failed: {e}"),
+                    }
+                }
             }
 
             AppMsg::Run => {
@@ -804,15 +1016,6 @@ impl Component for AppModel {
             }
         }
 
-        // Re-render if camera moved (and we have a loaded scene)
-        if self.needs_rerender && self.last_texture.is_some() {
-            self.needs_rerender = false;
-            match self.render_viewport() {
-                Ok(tex) => self.last_texture = Some(tex),
-                Err(e) => log::warn!("Re-render after camera move failed: {e}"),
-            }
-        }
-
         self.update_view(widgets, sender);
     }
 
@@ -827,6 +1030,13 @@ impl Component for AppModel {
         let seed_text = self.config.seed.to_string();
         if widgets.seed_entry.text().as_str() != seed_text {
             widgets.seed_entry.set_text(&seed_text);
+        }
+
+        // Sync console output
+        let console_buf = widgets.console_view.buffer();
+        let (start, end) = console_buf.bounds();
+        if console_buf.text(&start, &end, false).as_str() != self.console_output {
+            console_buf.set_text(&self.console_output);
         }
     }
 }
@@ -889,6 +1099,15 @@ impl AppModel {
             Ok((scene, warnings, gui_params)) => {
                 self.gui_params = gui_params;
                 self.object_count = scene.objects.len();
+                self.console_output = if warnings.is_empty() {
+                    format!("Run OK — {} objects\n", self.object_count)
+                } else {
+                    format!(
+                        "Run OK — {} objects\nWarnings:\n{}\n",
+                        self.object_count,
+                        warnings.join("\n")
+                    )
+                };
 
                 match viewport::render_scene_to_texture(
                     &mut self.backend,
@@ -914,12 +1133,14 @@ impl AppModel {
                     }
                     Err(e) => {
                         self.status = format!("Render error: {e}");
+                        self.console_output = format!("Render error:\n{e}\n");
                         log::error!("{e}");
                     }
                 }
             }
             Err(e) => {
                 self.status = format!("Script error: {e}");
+                self.console_output = format!("Script error:\n{e}\n");
                 log::error!("{e}");
             }
         }
@@ -956,6 +1177,10 @@ impl AppModel {
                                     "OBJ exported: {}",
                                     path.file_name().unwrap_or_default().to_string_lossy()
                                 );
+                                self.console_output.push_str(&format!(
+                                    "OBJ exported to {}\n",
+                                    path.display()
+                                ));
                             }
                             Err(e) => self.status = format!("OBJ write error: {e}"),
                         }
@@ -1015,6 +1240,10 @@ impl AppModel {
                                         path.file_name().unwrap_or_default().to_string_lossy(),
                                         tmpl_name
                                     );
+                                    self.console_output.push_str(&format!(
+                                        "Template export ok: {}\n",
+                                        path.display()
+                                    ));
                                 }
                                 Err(e) => self.status = format!("Template write error: {e}"),
                             },
