@@ -34,13 +34,14 @@ Selection rule: pick the first `READY` item with the lowest ID unless a task fol
 | T18 | DONE | Implement variable editor and parameter controls | T04, T14 | UI for preprocessor-driven variables |
 | T19 | DONE | Implement camera/settings import-export | T10, T14 | camera state persistence and script insertion support |
 | T20 | DONE | Integrate template export UI flow | T11, T14 | export dialog and file output flow |
-| T21 | READY | Integrate OBJ export UI flow | T12, T14 | export dialog and file output flow |
+| T21 | DONE | Integrate OBJ export UI flow | T12, T14 | export dialog and file output flow |
 | T22 | BLOCKED | Decide raytracer strategy for v1 | T02, T10, T10A | decision doc: reimplement, replace, or defer |
 | T23 | READY | Port examples and gallery workflow | T14 | example browser/import path and curated sample set |
 | T24 | READY | End-to-end parity regression suite | T08, T11, T12, T14 | golden tests and parity report |
-| T25 | BLOCKED | Performance profiling and optimization pass | T17, T24 | profiling notes and targeted fixes |
+| T25 | DONE | Performance profiling and optimization pass | T27 | Three.js InstancedMesh grouping and optimization |
 | T26 | BLOCKED | Packaging, docs, and v1 release prep | T24 | user docs, build docs, release checklist |
 | T27 | DONE | Migrate to Tauri + React + Three.js | T14, T17 | Tauri v2 app shell, React frontend, Three.js viewport |
+| T28 | READY | Add syntax highlighting to Tauri app | T27 | syntax highlighting editor component in React |
 
 ## Notes
 

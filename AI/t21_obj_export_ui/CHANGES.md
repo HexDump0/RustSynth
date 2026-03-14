@@ -1,0 +1,1 @@
+- **Tauri Integration**: The Tauri application frontend calls the `export_obj` and `export_template` endpoints. Added native 'Save File' picker logic matching original legacy UI outputs.

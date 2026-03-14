@@ -84,3 +84,11 @@ $ cargo test --workspace
 ```
 
 The `rustsynth` binary can be run once a display is available.
+
+### Pre-migration Polish (HexDump0)
+Before the Tauri migration, the following features were added to `rustsynth_app_gtk` by HexDump0:
+- **Syntax Highlighting**: Added syntax highlighting into `gtk::TextView` implementing custom tag colorization rules covering primitives, transforms, state rules, block symbols, and `#` preprocessor defines.
+- **Variables UI**: Added a settings panel allowing UI modification of script variables parameterised using the `#define` pattern (`T18`).
+- **Camera Settings**: Integrated the complete camera IO save/restore options natively into UI bindings (`T19`).
+- **Completed GUI Controls**: Fully fleshed-out options on the menubar for object counts & parameters in the header UI (`T20`).
+- Now obsolete due to the complete migration towards the React application scope via `T27`.
