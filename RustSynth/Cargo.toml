@@ -10,6 +10,7 @@ members = [
     "crates/rustsynth_export_template",
     "crates/rustsynth_export_obj",
     "crates/rustsynth_app_gtk",
+    "crates/rustsynth_app_tauri/src-tauri",
     "crates/rustsynth_viewport_bevy",
     "crates/rustsynth_viewport_gl",
     "crates/rustsynth_viewport_wgpu",

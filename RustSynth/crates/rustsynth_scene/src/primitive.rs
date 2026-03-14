@@ -1,7 +1,9 @@
 //! Primitive types that appear in the canonical scene.
 
+use serde::{Deserialize, Serialize};
+
 /// The kind of geometric primitive.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum PrimitiveKind {
     Box,
     Sphere,

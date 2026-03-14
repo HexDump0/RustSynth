@@ -10,11 +10,13 @@
 
 use std::collections::BTreeMap;
 
+use serde::{Deserialize, Serialize};
+
 use crate::diagnostics::Diagnostic;
 use rustsynth_core::rng::Rng;
 
 /// A GUI-controllable parameter extracted from preprocessor directives.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum GuiParam {
     Float { name: String, default: f64, min: f64, max: f64 },
     Int   { name: String, default: i64, min: i64, max: i64 },

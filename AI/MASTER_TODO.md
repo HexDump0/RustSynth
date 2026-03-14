@@ -40,6 +40,7 @@ Selection rule: pick the first `READY` item with the lowest ID unless a task fol
 | T24 | READY | End-to-end parity regression suite | T08, T11, T12, T14 | golden tests and parity report |
 | T25 | BLOCKED | Performance profiling and optimization pass | T17, T24 | profiling notes and targeted fixes |
 | T26 | BLOCKED | Packaging, docs, and v1 release prep | T24 | user docs, build docs, release checklist |
+| T27 | DONE | Migrate to Tauri + React + Three.js | T14, T17 | Tauri v2 app shell, React frontend, Three.js viewport |
 
 ## Notes
 
@@ -49,4 +50,5 @@ Selection rule: pick the first `READY` item with the lowest ID unless a task fol
 - `T14` is the preferred shell path because GTK4 + Relm4 is now the chosen desktop framework direction.
 - `T17` is the chosen viewport path: `wgpu` via `GtkGLArea` EGL surface. Bevy (T15) and custom OpenGL (T16) are deferred indefinitely.
 - Do not let frontend work block the language/runtime work.
+- `T27` replaces the GTK4+Relm4+wgpu stack with Tauri+React+Three.js for cross-platform support. The GTK app (T14) and wgpu viewport (T17) remain in the workspace but are deprecated.
 - If new tasks are discovered, add them here with dependencies and a short deliverable description.

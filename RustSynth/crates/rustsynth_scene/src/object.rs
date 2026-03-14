@@ -1,11 +1,13 @@
 //! A single object instance in the canonical scene.
 
+use serde::{Deserialize, Serialize};
+
 use rustsynth_core::color::Rgba;
 use rustsynth_core::math::Mat4;
 use crate::primitive::PrimitiveKind;
 
 /// One instantiated primitive with full world transform and material info.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SceneObject {
     pub kind: PrimitiveKind,
     pub transform: Mat4,

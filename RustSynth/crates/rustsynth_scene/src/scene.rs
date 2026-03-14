@@ -3,11 +3,13 @@
 //! This is the boundary type between the evaluator and all output backends
 //! (viewport renderers, template exporters, OBJ exporters).
 
+use serde::{Deserialize, Serialize};
+
 use crate::camera::CameraState;
 use crate::object::SceneObject;
 
 /// The renderer-agnostic scene produced by the evaluator.
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Scene {
     /// All emitted primitive instances in emission order.
     pub objects: Vec<SceneObject>,

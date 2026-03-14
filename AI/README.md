@@ -48,7 +48,7 @@ Optional files:
 The rewrite should be **parity-first, modular, and test-heavy**:
 
 - first reproduce the legacy behavior in a headless Rust core
-- then add a GTK4 + Relm4 desktop shell around that core
+- then add a Tauri v2 + React desktop shell around that core
 - keep viewport rendering behind a renderer boundary
 - only then spend effort on visual and performance improvements
 
@@ -59,12 +59,15 @@ The legacy source remains the reference implementation and should be consulted o
 The current preferred direction is:
 
 - headless core first
-- `gtk4-rs` + `Relm4` for the desktop application shell
-- `wgpu` via `GtkGLArea` EGL surface as the chosen viewport backend
-- viewport sits behind a renderer boundary (`rustsynth_render_api`) so the backend remains swappable
+- `Tauri v2` for the cross-platform desktop application shell
+- `React` + `TypeScript` for the frontend UI
+- `Three.js` (via `@react-three/fiber`) for the viewport rendering
+- viewport renders the canonical `Scene` JSON produced by the Rust core
+- GTK4+Relm4 and wgpu are deprecated (remain in workspace but superseded by the Tauri app)
 
 Viewport decision:
 
-- **chosen: `wgpu`** — targets the EGL context created by `GtkGLArea`; GTK owns the surface and drives the render loop
+- **chosen: `Three.js`** — renders Scene JSON in a React component via @react-three/fiber; supports all primitive types
+- deprecated: `wgpu` via `GtkGLArea` — complex EGL plumbing, limited cross-platform reach
 - deferred: Bevy — too much engine overhead, fights GTK for window ownership
 - deferred: custom OpenGL — wgpu covers this use case with a better API

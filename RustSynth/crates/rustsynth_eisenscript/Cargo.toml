@@ -9,6 +9,7 @@ rustsynth_core = { path = "../rustsynth_core" }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
 log = { workspace = true }
+serde = { workspace = true }
 
 [dev-dependencies]
 pretty_assertions = { workspace = true }

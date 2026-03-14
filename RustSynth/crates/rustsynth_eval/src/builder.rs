@@ -13,6 +13,7 @@
 use std::collections::VecDeque;
 
 use log::warn;
+use serde::{Deserialize, Serialize};
 
 use rustsynth_core::color::Rgba;
 use rustsynth_core::math::{Mat4, Vec3};
@@ -35,7 +36,7 @@ use crate::transform::apply_transforms;
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Configuration for the evaluation pass.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BuildConfig {
     /// Max BFS generations (corresponds to `set maxdepth` at top level).
     pub max_generations: u32,
