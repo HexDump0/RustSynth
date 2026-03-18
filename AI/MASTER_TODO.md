@@ -48,8 +48,8 @@ Selection rule: pick the first `READY` item with the lowest ID unless a task fol
 - `T01`, `T02`, and `T03` can be done independently and in any order.
 - `T04` through `T12` should keep the core fully headless.
 - `T10A` is the key boundary task before committing to any viewport implementation.
-- `T14` is the preferred shell path because GTK4 + Relm4 is now the chosen desktop framework direction.
-- `T17` is the chosen viewport path: `wgpu` via `GtkGLArea` EGL surface. Bevy (T15) and custom OpenGL (T16) are deferred indefinitely.
+- `T14` is the deferred shell path because GTK4 + Relm4 was deprecated in favor of Tauri.
+- `T17` is the deprecated viewport path: `wgpu` via `GtkGLArea` EGL surface. Bevy (T15) and custom OpenGL (T16) are deferred indefinitely.
 - Do not let frontend work block the language/runtime work.
-- `T27` replaces the GTK4+Relm4+wgpu stack with Tauri+React+Three.js for cross-platform support. The GTK app (T14) and wgpu viewport (T17) remain in the workspace but are deprecated.
+- `T27` replaces the GTK4+Relm4+wgpu stack with Tauri+React+Three.js for cross-platform support. The GTK app (T14) and wgpu viewport (T17) have been removed from the workspace.
 - If new tasks are discovered, add them here with dependencies and a short deliverable description.

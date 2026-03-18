@@ -9,11 +9,7 @@ members = [
     "crates/rustsynth_render_api",
     "crates/rustsynth_export_template",
     "crates/rustsynth_export_obj",
-    "crates/rustsynth_app_gtk",
     "crates/rustsynth_app_tauri/src-tauri",
-    "crates/rustsynth_viewport_bevy",
-    "crates/rustsynth_viewport_gl",
-    "crates/rustsynth_viewport_wgpu",
 ]
 
 [workspace.package]
@@ -39,10 +35,6 @@ env_logger = "0.11"
 
 # Math
 glam = { version = "0.29", features = ["serde"] }
-
-# GUI
-gtk4 = { version = "0.10", features = ["v4_10"] }
-relm4 = "0.10"
 
 # Text processing
 regex = "1"

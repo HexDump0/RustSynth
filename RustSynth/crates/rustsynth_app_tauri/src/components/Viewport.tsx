@@ -1,8 +1,45 @@
 import { useMemo, useRef, useEffect, memo } from "react";
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useThree } from "@react-three/fiber";
 import { OrbitControls, GizmoHelper, GizmoViewport } from "@react-three/drei";
 import * as THREE from "three";
 import type { Scene, SceneObject, PrimitiveKind } from "../types";
+
+// ── Shared geometry singletons (avoid recreating per InstancedGroup) ──
+const SHARED_GEO: Record<string, THREE.BufferGeometry> = {};
+function getSharedGeometry(kind: string): THREE.BufferGeometry {
+  if (SHARED_GEO[kind]) return SHARED_GEO[kind];
+  let geo: THREE.BufferGeometry;
+  switch (kind) {
+    case "Box":
+    case "Grid":
+    case "Mesh":
+    case "Template":
+    case "Unknown":
+      geo = new THREE.BoxGeometry(1, 1, 1);
+      break;
+    case "Sphere":
+      geo = new THREE.SphereGeometry(0.5, 24, 16);
+      break;
+    case "Cylinder":
+      geo = new THREE.CylinderGeometry(0.5, 0.5, 1, 24);
+      break;
+    case "Line":
+      geo = new THREE.CylinderGeometry(0.02, 0.02, 1, 6);
+      break;
+    case "Dot":
+      geo = new THREE.SphereGeometry(0.05, 8, 6);
+      break;
+    default:
+      geo = new THREE.BoxGeometry(1, 1, 1);
+      break;
+  }
+  SHARED_GEO[kind] = geo;
+  return geo;
+}
+
+// ── Reusable temp objects (avoid allocations in hot loops) ──
+const _tmpMatrix = new THREE.Matrix4();
+const _tmpColor = new THREE.Color();
 
 interface ViewportProps {
   scene: Scene | null;
@@ -29,7 +66,7 @@ export function Viewport({ scene }: ViewportProps) {
       <directionalLight position={[5, 8, 5]} intensity={0.8} />
       <directionalLight position={[-3, 2, -4]} intensity={0.3} />
 
-      {scene && <OptimizedSceneObjects objects={scene.objects} />}
+      {scene && <SceneRenderer objects={scene.objects} />}
 
       <OrbitControls makeDefault enableDamping dampingFactor={0.1} />
       <GizmoHelper alignment="bottom-right" margin={[60, 60]}>
@@ -39,12 +76,24 @@ export function Viewport({ scene }: ViewportProps) {
   );
 }
 
-const OptimizedSceneObjects = memo(function OptimizedSceneObjects({ objects }: { objects: SceneObject[] }) {
-  const { instancedGroups, nonInstanced } = useMemo(() => {
-    const groups = new Map<string, SceneObject[]>();
+// ── Pre-computed instanced group data ──
+interface InstancedGroupData {
+  kind: string;
+  opacity: number;
+  // Flat Float32Arrays for direct buffer writes — no per-object class instantiation
+  matrices: Float32Array;
+  colors: Float32Array;
+  count: number;
+}
+
+const SceneRenderer = memo(function SceneRenderer({ objects }: { objects: SceneObject[] }) {
+  const { groups, nonInstanced } = useMemo(() => {
+    // Phase 1: bucket objects by kind+opacity, count sizes
+    const buckets = new Map<string, { kind: string; opacity: number; objs: SceneObject[] }>();
     const nonInstanced: SceneObject[] = [];
 
-    for (const obj of objects) {
+    for (let i = 0; i < objects.length; i++) {
+      const obj = objects[i];
       const kind = normalizePrimitiveKind(obj.kind);
       if (kind === "Triangle") {
         nonInstanced.push(obj);
@@ -55,165 +104,136 @@ const OptimizedSceneObjects = memo(function OptimizedSceneObjects({ objects }: {
       const opacityKey = opacity < 1.0 ? opacity.toFixed(3) : "1";
       const key = `${kind}_${opacityKey}`;
 
-      let list = groups.get(key);
-      if (!list) {
-        list = [];
-        groups.set(key, list);
+      let bucket = buckets.get(key);
+      if (!bucket) {
+        bucket = { kind, opacity, objs: [] };
+        buckets.set(key, bucket);
       }
-      list.push(obj);
+      bucket.objs.push(obj);
     }
 
-    return { instancedGroups: groups, nonInstanced };
+    // Phase 2: build flat typed arrays for each group (single allocation, no per-object classes)
+    const groups: InstancedGroupData[] = [];
+    for (const [, bucket] of buckets) {
+      const count = bucket.objs.length;
+      const matrices = new Float32Array(count * 16);
+      const colors = new Float32Array(count * 3);
+
+      for (let i = 0; i < count; i++) {
+        const obj = bucket.objs[i];
+        // Copy 16 floats directly (already column-major from glam)
+        const t = obj.transform;
+        const mo = i * 16;
+        matrices[mo]      = t[0];  matrices[mo + 1]  = t[1];  matrices[mo + 2]  = t[2];  matrices[mo + 3]  = t[3];
+        matrices[mo + 4]  = t[4];  matrices[mo + 5]  = t[5];  matrices[mo + 6]  = t[6];  matrices[mo + 7]  = t[7];
+        matrices[mo + 8]  = t[8];  matrices[mo + 9]  = t[9];  matrices[mo + 10] = t[10]; matrices[mo + 11] = t[11];
+        matrices[mo + 12] = t[12]; matrices[mo + 13] = t[13]; matrices[mo + 14] = t[14]; matrices[mo + 15] = t[15];
+
+        const co = i * 3;
+        colors[co]     = obj.color.r;
+        colors[co + 1] = obj.color.g;
+        colors[co + 2] = obj.color.b;
+      }
+
+      groups.push({ kind: bucket.kind, opacity: bucket.opacity, matrices, colors, count });
+    }
+
+    return { groups, nonInstanced };
   }, [objects]);
 
   return (
     <>
-      {Array.from(instancedGroups.entries()).map(([key, objs]) => {
-        const [kind, opacityStr] = key.split("_");
-        return (
-          <InstancedGroup
-            key={key}
-            kind={kind}
-            opacity={parseFloat(opacityStr)}
-            objects={objs}
-          />
-        );
-      })}
+      {groups.map((g, i) => (
+        <InstancedGroup key={`${g.kind}_${g.opacity}_${i}`} data={g} />
+      ))}
       {nonInstanced.map((obj, i) => (
-        <ScenePrimitive key={i} obj={obj} />
+        <TrianglePrimitive key={i} obj={obj} />
       ))}
     </>
   );
 });
 
-function InstancedGroup({
-  kind,
-  opacity,
-  objects,
-}: {
-  kind: string;
-  opacity: number;
-  objects: SceneObject[];
-}) {
+// ── Instanced group: writes pre-built typed arrays directly to GPU buffers ──
+
+function InstancedGroup({ data }: { data: InstancedGroupData }) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
+  const invalidate = useThree(s => s.invalidate);
+  const { kind, opacity, matrices, colors, count } = data;
 
   const transparent = opacity < 1.0;
   const isWireframe = kind === "Grid" || kind === "Mesh" || kind === "Template" || kind === "Unknown";
   const side = kind === "Grid" ? THREE.DoubleSide : THREE.FrontSide;
 
+  const geometry = useMemo(() => getSharedGeometry(kind), [kind]);
+
+  const material = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        opacity,
+        transparent,
+        wireframe: isWireframe,
+        side,
+      }),
+    [opacity, transparent, isWireframe, side],
+  );
+
   useEffect(() => {
-    if (!meshRef.current) return;
     const mesh = meshRef.current;
-    
-    // Use raw Float32Arrays instead of instantiating Matrix4 and Color classes inside the loop
-    // THREE.Matrix4 backing array is elements string
-    
-    for (let i = 0; i < objects.length; i++) {
-      const obj = objects[i];
-      // Object transform array is already column-major 16-element
-      mesh.setMatrixAt(i, new THREE.Matrix4().fromArray(obj.transform));
-      mesh.setColorAt(i, new THREE.Color(obj.color.r, obj.color.g, obj.color.b));
-    }
+    if (!mesh) return;
 
+    // Write instance matrices directly from the flat Float32Array
+    mesh.instanceMatrix = new THREE.InstancedBufferAttribute(matrices, 16);
     mesh.instanceMatrix.needsUpdate = true;
-    if (mesh.instanceColor) {
-      mesh.instanceColor.needsUpdate = true;
-    }
-  }, [objects]);
 
-  // Generate correct geometry purely by JSX children declaration
+    // Write instance colors directly
+    mesh.instanceColor = new THREE.InstancedBufferAttribute(colors, 3);
+    mesh.instanceColor.needsUpdate = true;
+
+    // Recompute bounding sphere for frustum culling
+    mesh.computeBoundingSphere();
+
+    invalidate();
+  }, [matrices, colors, invalidate]);
+
   return (
-    <instancedMesh ref={meshRef} args={[null as any, null as any, objects.length]} matrixAutoUpdate={false}>
-      {kind === "Box" && <boxGeometry args={[1, 1, 1]} />}
-      {kind === "Sphere" && <sphereGeometry args={[0.5, 24, 16]} />}
-      {kind === "Cylinder" && <cylinderGeometry args={[0.5, 0.5, 1, 24]} />}
-      {kind === "Line" && <cylinderGeometry args={[0.02, 0.02, 1, 6]} />}
-      {kind === "Dot" && <sphereGeometry args={[0.05, 8, 6]} />}
-      {kind === "Grid" && <boxGeometry args={[1, 0.01, 1]} />}
-      {(kind === "Mesh" || kind === "Template" || kind === "Unknown") && <boxGeometry args={[1, 1, 1]} />}
-
-      <meshStandardMaterial
-        opacity={opacity}
-        transparent={transparent}
-        wireframe={isWireframe}
-        side={side}
-      />
-    </instancedMesh>
+    <instancedMesh
+      ref={meshRef}
+      args={[geometry, material, count]}
+      matrixAutoUpdate={false}
+      frustumCulled={false}
+    />
   );
 }
 
-function ScenePrimitive({ obj }: { obj: SceneObject }) {
-  const matrix = useMemo(() => {
-    const m = new THREE.Matrix4();
-    m.fromArray(obj.transform);
-    return m;
-  }, [obj.transform]);
+// ── Triangle primitive (non-instanced, typically rare) ──
 
-  const color = useMemo(
-    () => new THREE.Color(obj.color.r, obj.color.g, obj.color.b),
-    [obj.color],
-  );
-
-  const opacity = obj.alpha * obj.color.a;
-  const transparent = opacity < 1.0;
-
-  const kind = normalizePrimitiveKind(obj.kind);
-
-  if (kind === "Triangle") {
-    return <TrianglePrimitive matrix={matrix} color={color} opacity={opacity} kind={obj.kind} />;
-  }
-
-  // Fallback, should rarely be hit since most fallbacks go into InstancedGroup
-  return (
-    <mesh matrixAutoUpdate={false} matrix={matrix}>
-      <boxGeometry args={[1, 1, 1]} />
-      <meshStandardMaterial
-        color={color}
-        opacity={opacity}
-        transparent={transparent}
-        wireframe
-      />
-    </mesh>
-  );
-}
-
-function TrianglePrimitive({
-  matrix,
-  color,
-  opacity,
-  kind,
-}: {
-  matrix: THREE.Matrix4;
-  color: THREE.Color;
-  opacity: number;
-  kind: PrimitiveKind;
-}) {
+function TrianglePrimitive({ obj }: { obj: SceneObject }) {
   const geometry = useMemo(() => {
     const geo = new THREE.BufferGeometry();
     let vertexStr = "";
-    if (typeof kind === "object" && "Triangle" in kind) {
-      vertexStr = kind.Triangle;
+    if (typeof obj.kind === "object" && "Triangle" in obj.kind) {
+      vertexStr = obj.kind.Triangle;
     }
     const cleaned = vertexStr.replace(/[\[\]]/g, "").trim();
     const parts = cleaned.split(";").map(s => s.trim().split(/\s+/).map(Number));
     if (parts.length === 3 && parts.every(p => p.length === 3)) {
-      const verts = new Float32Array([
-        ...parts[0], ...parts[1], ...parts[2],
-      ]);
+      const verts = new Float32Array([...parts[0], ...parts[1], ...parts[2]]);
       geo.setAttribute("position", new THREE.BufferAttribute(verts, 3));
       geo.computeVertexNormals();
     }
     return geo;
-  }, [kind]);
+  }, [obj.kind]);
 
-  const transparent = opacity < 1.0;
+  const matrix = useMemo(() => _tmpMatrix.clone().fromArray(obj.transform), [obj.transform]);
+  const color = useMemo(() => new THREE.Color(obj.color.r, obj.color.g, obj.color.b), [obj.color]);
+  const opacity = obj.alpha * obj.color.a;
 
   return (
     <mesh matrixAutoUpdate={false} matrix={matrix} geometry={geometry}>
       <meshStandardMaterial
         color={color}
         opacity={opacity}
-        transparent={transparent}
+        transparent={opacity < 1.0}
         side={THREE.DoubleSide}
       />
     </mesh>

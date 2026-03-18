@@ -39,7 +39,7 @@ Implemented `rustsynth_viewport_wgpu`, the chosen viewport backend for RustSynth
 | Cylinder | Capped cylinder from `adapter::cylinder_endpoints` |
 | Line | Thin cylinder approximation |
 | Dot | Small sphere at object center |
-| Grid | Flat quad from transform X/Y axes |
+| Grid | Wireframe box |
 | Triangle | Parsed from raw vertex payload string |
 | Mesh | Falls back to box representation |
 | Template | Invisible (no geometry) |

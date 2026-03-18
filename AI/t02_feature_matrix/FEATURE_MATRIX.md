@@ -146,7 +146,7 @@ Every feature is mapped to its legacy source module(s), its target Rust crate, t
 | `mesh` | Start/end cylinder-like primitive | 🏗 |
 | `line` | Thin line | 🏗 |
 | `dot` | Point primitive | 🏗 |
-| `grid` | Grid plane | 🏗 |
+| `grid` | Wireframe box | 🏗 |
 | `template` | Template placeholder primitive | 🏗 |
 | `triangle[...]` | Special inline triangle syntax | ❌ |
 | `primitive::tag` syntax | E.g. `box::metal`, `sphere::shiny` — creates named `PrimitiveClass` | 🏗 |
