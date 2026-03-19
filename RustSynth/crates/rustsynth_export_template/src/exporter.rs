@@ -42,7 +42,7 @@ use rustsynth_core::error::Result;
 use rustsynth_core::math::Vec3;
 use rustsynth_scene::primitive::PrimitiveKind;
 use rustsynth_scene::Scene;
-use rustsynth_render_api::adapter::{
+use rustsynth_scene::adapter::{
     cam_column_matrix_str, column_matrix_str, decompose_transform, matrix_row_str, pov_matrix_str,
     sphere_center_radius,
 };

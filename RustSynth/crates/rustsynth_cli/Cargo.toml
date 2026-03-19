@@ -1,0 +1,23 @@
+[package]
+name = "rustsynth_cli"
+version.workspace = true
+edition.workspace = true
+description = "CLI for EisenScript compilation and scene generation"
+
+[[bin]]
+name = "rustsynth"
+path = "src/main.rs"
+
+[dependencies]
+rustsynth_core = { path = "../rustsynth_core" }
+rustsynth_eisenscript = { path = "../rustsynth_eisenscript" }
+rustsynth_semantics = { path = "../rustsynth_semantics" }
+rustsynth_eval = { path = "../rustsynth_eval" }
+rustsynth_scene = { path = "../rustsynth_scene" }
+rustsynth_export_template = { path = "../rustsynth_export_template" }
+rustsynth_export_obj = { path = "../rustsynth_export_obj" }
+anyhow = { workspace = true }
+clap = { workspace = true }
+serde_json = { workspace = true }
+env_logger = { workspace = true }
+log = { workspace = true }

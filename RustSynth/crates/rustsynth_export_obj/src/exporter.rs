@@ -39,7 +39,7 @@ use rustsynth_core::error::Result;
 use rustsynth_core::math::Vec3;
 use rustsynth_scene::primitive::PrimitiveKind;
 use rustsynth_scene::Scene;
-use rustsynth_render_api::adapter::decompose_transform;
+use rustsynth_scene::adapter::decompose_transform;
 
 use crate::tessellate::{
     tessellate_box, tessellate_cylinder, tessellate_grid, tessellate_sphere, ObjGroup,

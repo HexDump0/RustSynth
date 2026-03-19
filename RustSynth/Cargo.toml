@@ -6,10 +6,11 @@ members = [
     "crates/rustsynth_semantics",
     "crates/rustsynth_eval",
     "crates/rustsynth_scene",
-    "crates/rustsynth_render_api",
     "crates/rustsynth_export_template",
     "crates/rustsynth_export_obj",
     "crates/rustsynth_app_tauri/src-tauri",
+    "crates/rustsynth_cli",
+    "crates/rustsynth_wasm",
 ]
 
 [workspace.package]
@@ -40,6 +41,7 @@ glam = { version = "0.29", features = ["serde"] }
 regex = "1"
 
 # Testing utilities
+clap = { version = "4", features = ["derive"] }
 pretty_assertions = "1"
 
 [profile.dev]

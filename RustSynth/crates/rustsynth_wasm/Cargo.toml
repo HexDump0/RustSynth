@@ -1,0 +1,21 @@
+[package]
+name = "rustsynth_wasm"
+version.workspace = true
+edition.workspace = true
+description = "WebAssembly bindings for the RustSynth EisenScript pipeline"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+rustsynth_core = { path = "../rustsynth_core" }
+rustsynth_eisenscript = { path = "../rustsynth_eisenscript" }
+rustsynth_semantics = { path = "../rustsynth_semantics" }
+rustsynth_eval = { path = "../rustsynth_eval" }
+rustsynth_scene = { path = "../rustsynth_scene" }
+rustsynth_export_obj = { path = "../rustsynth_export_obj" }
+rustsynth_export_template = { path = "../rustsynth_export_template" }
+wasm-bindgen = "0.2"
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde-wasm-bindgen = "0.6"

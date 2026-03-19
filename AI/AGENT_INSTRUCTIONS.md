@@ -9,6 +9,15 @@ Rewrite Structure Synth in Rust while keeping the work:
 - testable
 - resumable across agent handoffs
 
+## Architecture overview
+
+RustSynth has a simple two-layer architecture:
+
+1. **Rust core + CLI** — all compute-heavy work: EisenScript parsing, semantic analysis, evaluation/scene generation, and export (OBJ, template). Can be used standalone as a CLI tool (`rustsynth`).
+2. **Web UI (Tauri + React + Three.js)** — a thin wrapper that calls the Rust pipeline over Tauri IPC and renders the scene with Three.js. The web layer does no computation — it only handles UI and 3D visualization.
+
+The Rust core must never depend on any UI framework (Tauri, React, Three.js, GTK, etc.).
+
 ## Hard rules
 
 1. **Read before acting.** Start with:
@@ -21,7 +30,7 @@ Rewrite Structure Synth in Rust while keeping the work:
 4. **Update the master todo.** Mark task state changes, added subtasks, and blockers.
 5. **Leave handoff notes.** Assume the next agent has no memory except what is in this repository.
 6. **Use the legacy code as the behavior reference.** Do not invent semantics when the old code answers the question.
-7. **Keep the core independent of UI and renderer choices.** Parser, semantics, and evaluator must not depend on GTK, Relm4, wgpu, or any frontend.
+7. **Keep the core independent of UI.** Parser, semantics, evaluator, and exporters must not depend on Tauri, React, Three.js, or any frontend.
 8. **Add tests with behavior changes.** Parser/evaluator/export work should land with automated tests whenever practical.
 9. **Prefer parity before redesign.** Improvements are welcome after a legacy-equivalent baseline exists.
 10. **Record decisions.** If you choose a design path, write it down in the task folder.
@@ -62,78 +71,58 @@ Include:
 - known blockers
 - unanswered questions
 
+## Workspace layout
+
+```text
+RustSynth/
+  Cargo.toml                    # workspace root
+  crates/
+    rustsynth_core/             # shared types, errors, math, RNG
+    rustsynth_eisenscript/      # preprocessor, lexer, parser, AST
+    rustsynth_semantics/        # name resolution, rule graph, validation
+    rustsynth_eval/             # evaluator/builder, scene emission
+    rustsynth_scene/            # scene representation + geometry adapters
+    rustsynth_export_template/  # template exporter
+    rustsynth_export_obj/       # OBJ exporter
+    rustsynth_cli/              # standalone CLI binary
+    rustsynth_app_tauri/        # Tauri app (React + Three.js frontend)
+  tests/
+    fixtures/
+    golden/
+```
+
+### Crate responsibilities
+
+- **`rustsynth_core`** — common errors, IDs, config types, color utilities, deterministic RNG, math adapters
+- **`rustsynth_eisenscript`** — preprocessor, lexer, parser, AST, diagnostics
+- **`rustsynth_semantics`** — rule graph, name resolution, primitive lookup, validation
+- **`rustsynth_eval`** — execution engine that expands rules into scene objects
+- **`rustsynth_scene`** — renderer-agnostic scene/object model + geometry adapter helpers (decompose transforms, matrix strings, etc.)
+- **`rustsynth_export_template`** — template-based exporter
+- **`rustsynth_export_obj`** — OBJ exporter
+- **`rustsynth_cli`** — standalone CLI: `rustsynth build`, `rustsynth export-obj`, `rustsynth export-template`
+- **`rustsynth_app_tauri`** — Tauri v2 desktop app with React frontend and Three.js viewport
+
 ## Recommended engineering principles
 
 ### 1. Preserve legacy semantics first
 Legacy execution pipeline:
 
-`source text -> preprocessor -> tokenizer -> parser -> ruleset/name resolution -> builder/evaluator -> renderer/export backend`
+`source text -> preprocessor -> tokenizer -> parser -> ruleset/name resolution -> builder/evaluator -> scene`
 
 Recreate this pipeline in Rust before adding UX improvements.
 
-### 2. Separate crates by responsibility
-Recommended split:
-
-- `rustsynth_core` — shared types, errors, math helpers, IDs
-- `rustsynth_eisenscript` — lexer, preprocessor, parser, AST, diagnostics
-- `rustsynth_semantics` — name resolution, rule graph, validation
-- `rustsynth_eval` — execution/builder logic and deterministic expansion
-- `rustsynth_scene` — canonical render/export scene representation
-- `rustsynth_render_api` — renderer boundary traits and viewport-facing scene contracts
-- `rustsynth_export_template` — template exporter
-- `rustsynth_export_obj` — OBJ exporter
-- `rustsynth_viewport_wgpu` — **chosen** viewport backend: wgpu via `GtkGLArea` EGL surface
-- `rustsynth_viewport_bevy` — deferred; Bevy viewport option (not the chosen path)
-- `rustsynth_viewport_gl` — deferred; custom OpenGL option (not the chosen path)
-- `rustsynth_app_gtk` — GTK4 + Relm4 desktop UI shell
-- optional: `rustsynth_script` — scripting compatibility layer
-
-### 3. Keep determinism explicit
+### 2. Keep determinism explicit
 The legacy app uses seeds, random streams, recursion mode, and object limits. Treat reproducibility as a feature, not an implementation detail.
 
-### 4. Prefer golden tests
+### 3. Prefer golden tests
 Use legacy examples as fixtures. Capture parser outputs, scene snapshots, exported text, and rendered metadata where practical.
 
-### 5. Document incomplete parity
+### 4. Document incomplete parity
 If a feature is deferred, record:
 - current gap
 - affected examples/files
 - suggested implementation path
-
-## GTK4 + Relm4 guidance
-
-The current preferred app-shell stack is:
-
-- `gtk4-rs` for native desktop widgets and windowing
-- `Relm4` for component/message architecture
-
-This stack is preferred for:
-
-- editor-heavy desktop UX
-- menus, shortcuts, dialogs, panes, and settings
-- export workflows and file handling
-- maintainable component structure
-
-## Viewport guidance
-
-The viewport backend decision is made: **`wgpu` via `GtkGLArea` EGL surface**.
-
-Current preferred rule:
-
-- the app shell is GTK4 + Relm4
-- the core is headless
-- the viewport sits behind a renderer boundary (`rustsynth_render_api`)
-- the viewport implementation is `rustsynth_viewport_wgpu`
-
-Chosen approach:
-
-- `GtkGLArea` owns the surface and EGL context — GTK drives the loop
-- `wgpu` targets that context via `wgpu::Backends::GL`
-- GTK signals (`realize`, `unrealize`, `resize`, `render`) drive the wgpu lifecycle
-- camera input is handled by GTK event controllers, no inter-thread channels needed
-- WGSL shaders handle primitive rendering (box, sphere, cylinder, etc.)
-
-Bevy and custom OpenGL are deferred indefinitely. Do not implement T15 or T16.
 
 ## When context is running low
 

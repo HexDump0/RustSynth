@@ -4,7 +4,7 @@
 //! and the raw data formats that GPU backends consume.
 
 use rustsynth_core::math::{Mat4, Vec3};
-use rustsynth_scene::object::SceneObject;
+use crate::object::SceneObject;
 
 /// Decompose a `SceneObject` transform into its three local-axis vectors and
 /// origin, mirroring how the legacy C++ renderers unpacked the matrix.
@@ -115,4 +115,3 @@ pub fn cylinder_endpoints(obj: &SceneObject) -> (Vec3, Vec3, f32) {
     let radius = dir1.length();
     (base, top, radius)
 }
-

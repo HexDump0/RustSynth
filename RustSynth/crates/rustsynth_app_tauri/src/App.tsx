@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { invoke } from "@tauri-apps/api/core";
-import type { PipelineResult, BuildConfig, GuiParam, Scene } from "./types";
+import { getBackend, type Backend } from "./backend";
+import type { BuildConfig, GuiParam, Scene } from "./types";
 import { Viewport } from "./components/Viewport";
 import { VariablePanel } from "./components/VariablePanel";
 
@@ -37,6 +37,7 @@ function App() {
   const [maxObjects, setMaxObjects] = useState(100000);
   const [recursionMode, setRecursionMode] = useState<"BreadthFirst" | "DepthFirst">("BreadthFirst");
   const [filePath, setFilePath] = useState<string | null>(null);
+  const [backend, setBackend] = useState<Backend | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const buildConfig = useCallback((): BuildConfig => ({
@@ -50,12 +51,10 @@ function App() {
   }), [seed, maxObjects, recursionMode]);
 
   const runScript = useCallback(async () => {
+    if (!backend) return;
     try {
       setStatus("Building...");
-      const result = await invoke<PipelineResult>("run_script", {
-        source,
-        config: buildConfig(),
-      });
+      const result = await backend.runScript(source, buildConfig());
       setScene(result.scene);
       setObjectCount(result.scene.objects.length);
       setWarnings(result.warnings);
@@ -69,12 +68,17 @@ function App() {
       setStatus(`Error: ${e}`);
       setWarnings([`${e}`]);
     }
-  }, [source, buildConfig]);
+  }, [backend, source, buildConfig]);
 
-  // Run on first load
+  // Load backend on mount
   useEffect(() => {
-    runScript();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    getBackend().then(setBackend);
+  }, []);
+
+  // Run on first load once backend is ready
+  useEffect(() => {
+    if (backend) runScript();
+  }, [backend]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleParamChange = useCallback((name: string, value: string) => {
     setSource(prev => {
@@ -101,53 +105,51 @@ function App() {
   }, []);
 
   const handleOpenFile = useCallback(async () => {
+    if (!backend) return;
     try {
-      const result = await invoke<{ path: string; content: string }>("open_file_dialog");
+      const result = await backend.openFile();
+      if (!result) return;
       setSource(result.content);
       setFilePath(result.path);
       setStatus(`Opened: ${result.path.split("/").pop()}`);
     } catch (e) {
-      if (e !== "cancelled") setStatus(`Open error: ${e}`);
+      setStatus(`Open error: ${e}`);
     }
-  }, []);
+  }, [backend]);
 
   const handleSaveFile = useCallback(async () => {
+    if (!backend) return;
     try {
-      const path = await invoke<string>("save_file_dialog", {
-        content: source,
-        currentPath: filePath,
-      });
+      const path = await backend.saveFile(source, filePath);
+      if (!path) return;
       setFilePath(path);
       setStatus(`Saved: ${path.split("/").pop()}`);
     } catch (e) {
-      if (e !== "cancelled") setStatus(`Save error: ${e}`);
+      setStatus(`Save error: ${e}`);
     }
-  }, [source, filePath]);
+  }, [backend, source, filePath]);
 
   const handleExportObj = useCallback(async () => {
+    if (!backend) return;
     try {
-      const result = await invoke<string>("export_obj", {
-        source,
-        config: buildConfig(),
-      });
+      const result = await backend.exportObj(source, buildConfig());
+      if (!result) return;
       setStatus(`OBJ exported: ${result}`);
     } catch (e) {
-      if (e !== "cancelled") setStatus(`Export error: ${e}`);
+      setStatus(`Export error: ${e}`);
     }
-  }, [source, buildConfig]);
+  }, [backend, source, buildConfig]);
 
   const handleExportTemplate = useCallback(async () => {
+    if (!backend) return;
     try {
-      const result = await invoke<string>("export_template", {
-        source,
-        config: buildConfig(),
-        templatePath: null,
-      });
+      const result = await backend.exportTemplate(source, buildConfig());
+      if (!result) return;
       setStatus(`Template exported: ${result}`);
     } catch (e) {
-      if (e !== "cancelled") setStatus(`Export error: ${e}`);
+      setStatus(`Export error: ${e}`);
     }
-  }, [source, buildConfig]);
+  }, [backend, source, buildConfig]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     // Ctrl/Cmd+Enter to run

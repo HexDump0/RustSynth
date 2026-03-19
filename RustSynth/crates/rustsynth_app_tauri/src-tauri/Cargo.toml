@@ -9,7 +9,7 @@ name = "rustsynth_app_tauri_lib"
 crate-type = ["lib", "cdylib"]
 
 [[bin]]
-name = "rustsynth"
+name = "rustsynth-app"
 path = "src/main.rs"
 
 [build-dependencies]
