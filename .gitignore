@@ -1,3 +1,83 @@
 StructureSynth/*
 target
 node_modules
+AI/*
+
+# Ignore IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Ignore build files
+build/
+dist/
+*.o
+*.out
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Ignore logs and temporary files
+*.log
+*.tmp
+*.bak
+
+# Ignore virtual environment files
+venv/
+env/
+__pycache__/
+
+# Ignore configuration files
+*.ini
+*.cfg
+*.conf
+
+# Ignore test files
+*.test.js
+*.spec.js
+
+# Ignore coverage files
+coverage/
+
+# Ignore node_modules
+node_modules/
+
+# Ignore package-lock.json
+package-lock.json
+
+# Ignore yarn.lock
+yarn.lock
+
+# Ignore pnpm-lock.yaml
+pnpm-lock.yaml
+
+# Ignore .env files
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Ignore IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+
+
+# Ignore build files
+build/
+dist/
+*.o
+*.out
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Ignore logs and temporary files
+*.log
+*.

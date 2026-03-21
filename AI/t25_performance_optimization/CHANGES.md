@@ -1,1 +1,0 @@
-- `crates/rustsynth_app_tauri/src/components/Viewport.tsx`: grouped elements by kind and opacity, implementing `<instancedMesh>` with manual `setMatrixAt()` population.

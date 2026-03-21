@@ -1,2 +1,0 @@
-- **WASM compilation** – consider removing the Tauri dependency entirely for pure Web/WASM targets if desktop APIs are not mandatory.
-- **Further webgl tuning** – memory mapping enhancements or SharedArrayBuffer with Rust if required.
