@@ -61,8 +61,7 @@ function App() {
       setGuiParams(result.gui_params);
       const warnCount = result.warnings.length;
       setStatus(
-        `${result.scene.objects.length} objects` +
-        (warnCount > 0 ? ` · ${warnCount} warning${warnCount > 1 ? "s" : ""}` : "")
+        `READY`
       );
     } catch (e) {
       setStatus(`Error: ${e}`);
@@ -70,12 +69,10 @@ function App() {
     }
   }, [backend, source, buildConfig]);
 
-  // Load backend on mount
   useEffect(() => {
     getBackend().then(setBackend);
   }, []);
 
-  // Run on first load once backend is ready
   useEffect(() => {
     if (backend) runScript();
   }, [backend]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -152,12 +149,10 @@ function App() {
   }, [backend, source, buildConfig]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    // Ctrl/Cmd+Enter to run
     if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
       e.preventDefault();
       runScript();
     }
-    // Tab inserts 2 spaces
     if (e.key === "Tab" && !e.shiftKey) {
       e.preventDefault();
       const ta = textareaRef.current;
@@ -172,65 +167,128 @@ function App() {
     }
   }, [runScript]);
 
+  const fileName = filePath ? filePath.split("/").pop() : "unsaved";
+
   return (
-    <div className="app-container">
-      {/* Toolbar */}
-      <div className="toolbar">
-        <button onClick={handleNewFile}>New</button>
-        <button onClick={handleOpenFile}>Open</button>
-        <button onClick={handleSaveFile}>Save</button>
-        <div style={{ width: 1, height: 20, background: "var(--border)" }} />
-        <button className="primary" onClick={runScript}>
-          ▶ Run
-        </button>
-        <div style={{ width: 1, height: 20, background: "var(--border)" }} />
-        <label>Seed:</label>
-        <input
-          type="number"
-          value={seed}
-          min={0}
-          onChange={e => setSeed(parseInt(e.target.value) || 0)}
-        />
-        <label>Max:</label>
-        <input
-          type="number"
-          value={maxObjects}
-          min={1}
-          step={1000}
-          onChange={e => setMaxObjects(parseInt(e.target.value) || 100000)}
-        />
-        <select
-          value={recursionMode}
-          onChange={e => setRecursionMode(e.target.value as "BreadthFirst" | "DepthFirst")}
-        >
-          <option value="BreadthFirst">BFS</option>
-          <option value="DepthFirst">DFS</option>
-        </select>
-        <div style={{ flex: 1 }} />
-        <button onClick={handleExportObj}>Export OBJ</button>
-        <button onClick={handleExportTemplate}>Export Template</button>
-        <button onClick={() => setShowConsole(v => !v)}>
-          Console {warnings.length > 0 ? `(${warnings.length})` : ""}
-        </button>
+    <div className="h-screen flex flex-col overflow-hidden bg-ctp-base text-ctp-text font-sans">
+      <div className="bg-ctp-crust py-4 px-6 flex justify-between items-center shrink-0">
+        <div className="flex gap-2 items-end">
+          <h1 className="font-bold text-2xl text-ctp-mauve uppercase">RustSynth</h1>
+          <span className="text-xs text-ctp-subtext0 font-mono pb-1">v0.1.0</span>
+        </div>
+        <div className="flex justify-center items-center gap-8">
+          <a
+            href="https://github.com/HexDump0/RustSynth"
+            target="_blank"
+            rel="noreferrer"
+            className="flex gap-2 font-bold justify-center items-center text-ctp-text hover:text-ctp-mauve transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 16 16">
+              <path fill="currentColor" fillRule="evenodd"
+                d="M7.976 0A7.977 7.977 0 0 0 0 7.976c0 3.523 2.3 6.507 5.431 7.584c.392.049.538-.196.538-.392v-1.37c-2.201.49-2.69-1.076-2.69-1.076c-.343-.93-.881-1.175-.881-1.175c-.734-.489.048-.489.048-.489c.783.049 1.224.832 1.224.832c.734 1.223 1.859.88 2.3.685c.048-.538.293-.88.489-1.076c-1.762-.196-3.621-.881-3.621-3.964c0-.88.293-1.566.832-2.153c-.05-.147-.343-.978.098-2.055c0 0 .685-.195 2.201.832c.636-.196 1.322-.245 2.007-.245s1.37.098 2.006.245c1.517-1.027 2.202-.832 2.202-.832c.44 1.077.146 1.908.097 2.104a3.16 3.16 0 0 1 .832 2.153c0 3.083-1.86 3.719-3.62 3.915c.293.244.538.733.538 1.467v2.202c0 .196.146.44.538.392A7.98 7.98 0 0 0 16 7.976C15.951 3.572 12.38 0 7.976 0"
+                clipRule="evenodd" />
+            </svg>
+            GITHUB
+          </a>
+          <a
+            href="https://github.com/HexDump0/RustSynth"
+            target="_blank"
+            rel="noreferrer"
+            className="flex gap-1 font-bold justify-center items-center text-ctp-text hover:text-ctp-mauve transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 16 16">
+              <path fill="currentColor"
+                d="M3 3a2 2 0 0 1 2-2h3.586a1.5 1.5 0 0 1 1.06.44l2.915 2.914A1.5 1.5 0 0 1 13 5.414V13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zm2-1a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V6H9.5A1.5 1.5 0 0 1 8 4.5V2zm4.5 3h2.293L9 2.207V4.5a.5.5 0 0 0 .5.5m-4 3a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1zM5 10.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5m.5 1.5a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1z" />
+            </svg>
+            DOCS
+          </a>
+        </div>
       </div>
 
-      {/* Main content */}
-      <div className="main-panel">
-        {/* Editor */}
-        <div className="editor-panel">
-          <div className="panel-header">
-            <span>Editor</span>
-            <span style={{ fontSize: 10, color: "var(--text-muted)" }}>
-              Ctrl+Enter to run
-            </span>
+      <div className="h-12 bg-ctp-base px-6 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-6">
+          <div className="flex items-center justify-center gap-6">
+            <button
+              onClick={handleNewFile}
+              className="bg-ctp-crust px-4 py-1 text-sm font-mono text-ctp-subtext1 tracking-wide uppercase hover:text-ctp-mauve transition-colors cursor-pointer"
+            >
+              NEW
+            </button>
+            <button
+              onClick={handleOpenFile}
+              className="bg-ctp-crust px-4 py-1 text-sm font-mono text-ctp-subtext1 tracking-wide uppercase hover:text-ctp-mauve transition-colors cursor-pointer"
+            >
+              OPEN
+            </button>
+            <button
+            onClick={handleSaveFile}
+            className="bg-ctp-crust px-4 py-1 text-sm font-mono text-ctp-subtext1 tracking-wide uppercase hover:text-ctp-mauve transition-colors cursor-pointer"
+          >
+            SAVE
+          </button>
+          </div>
+          <div className="h-6 w-px bg-ctp-surface1" />
+          <div className="flex items-center justify-center gap-6">
+            <div className="bg-ctp-crust px-4 py-1 text-sm font-mono text-ctp-subtext1 tracking-wide uppercase w-24 flex justify-between">
+              SEED
+              <input
+                type="number"
+                value={seed}
+                min={0}
+                onChange={e => setSeed(parseInt(e.target.value) || 0)}
+                className="bg-transparent text-ctp-mauve w-12 text-right outline-none font-mono text-sm [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none pr-4"
+              />
+            </div>
+            <div className="bg-ctp-crust px-4 py-1 text-sm font-mono text-ctp-subtext1 tracking-wide flex justify-between gap-6 min-w-36">
+              MAX
+              <input
+                type="number"
+                value={maxObjects}
+                min={1}
+                step={1000}
+                onChange={e => setMaxObjects(parseInt(e.target.value) || 100000)}
+                className="bg-transparent text-ctp-mauve w-16 text-right outline-none font-mono text-sm [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              />
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center justify-center gap-6">
+          <button
+            onClick={runScript}
+            className="bg-ctp-mauve px-4 py-1 text-sm font-mono tracking-wide flex justify-between gap-2 text-ctp-base items-center hover:opacity-90 transition-opacity cursor-pointer font-semibold"
+          >
+            RUN
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+              <path fill="currentColor"
+                d="M3 3.5a1.5 1.5 0 0 1 2.235-1.307l8 4.5a1.5 1.5 0 0 1 0 2.615l-8 4.5A1.5 1.5 0 0 1 3 12.5z" />
+            </svg>
+          </button>
+          <button
+            onClick={handleExportObj}
+            className="bg-ctp-crust px-4 py-1 text-sm font-mono text-ctp-subtext1 tracking-wide flex justify-between gap-2 items-center hover:text-ctp-mauve transition-colors cursor-pointer"
+          >
+            EXPORT OBJ
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+              <path fill="currentColor"
+                d="M11.5 7a4.5 4.5 0 1 0 0 9a4.5 4.5 0 0 0 0-9m2.354 4.854l-2 2a.5.5 0 0 1-.35.147h-.006a.5.5 0 0 1-.348-.144l-.003-.003l-2-2a.5.5 0 0 1 .707-.707L11 12.294V9.001a.5.5 0 0 1 1 0v3.293l1.146-1.147a.5.5 0 0 1 .707.707zM4.25 12H6v1H4.25a3.25 3.25 0 0 1-.22-6.493A4 4 0 0 1 8 3a3.99 3.99 0 0 1 3.857 3h-1.046A2.99 2.99 0 0 0 8 4a3 3 0 0 0-3 3a.5.5 0 0 1-.5.5h-.25a2.25 2.25 0 1 0 0 4.5" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 flex-1 min-h-0">
+        <div className="flex flex-col h-full">
+          <div className="w-full h-8 bg-ctp-mantle flex justify-between items-center px-6">
+            <p className="text-ctp-mauve uppercase text-xs font-semibold">{fileName}</p>
+            <p className="text-ctp-overlay1 text-xs">Ctrl+Enter to run</p>
           </div>
           <textarea
             ref={textareaRef}
-            className="editor-textarea"
             value={source}
             onChange={e => setSource(e.target.value)}
             onKeyDown={handleKeyDown}
             spellCheck={false}
+            className="bg-ctp-crust p-2.5 text-sm leading-relaxed overflow-auto whitespace-pre font-mono flex-1 min-h-0 resize-none outline-none text-ctp-text"
           />
           {guiParams.length > 0 && (
             <VariablePanel
@@ -240,7 +298,7 @@ function App() {
             />
           )}
           {showConsole && (
-            <div className="console-panel">
+            <div className="border-t border-ctp-surface1 max-h-40 overflow-y-auto bg-ctp-crust px-3 py-2 text-sm text-ctp-subtext0 whitespace-pre-wrap font-mono shrink-0">
               {warnings.length === 0
                 ? "No warnings."
                 : warnings.map((w, i) => <div key={i}>{w}</div>)}
@@ -248,28 +306,28 @@ function App() {
           )}
         </div>
 
-        {/* Viewport */}
-        <div className="viewport-panel">
-          <div className="panel-header">
-            <span>Viewport</span>
-            <span style={{ fontSize: 10, color: "var(--text-muted)" }}>
-              {objectCount} objects
-            </span>
-          </div>
-          <div className="viewport-canvas">
-            <Viewport scene={scene} />
-          </div>
+        <div className="bg-black flex-1">
+          <Viewport scene={scene} />
         </div>
       </div>
 
-      {/* Status bar */}
-      <div className="status-bar">
-        <div className="status-left">
-          <span className={status.startsWith("Error") ? "status-error" : ""}>
+      <div className="bg-ctp-mantle px-6 py-2 w-full flex justify-between shrink-0">
+        <div className="flex gap-7">
+          <button
+            onClick={() => setShowConsole(v => !v)}
+            className={`text-xs uppercase font-medium transition-colors cursor-pointer ${warnings.length > 0 ? "text-ctp-red hover:text-ctp-red" : "text-ctp-subtext1 hover:text-ctp-mauve"}`}
+          >
+            {showConsole ? "HIDE CONSOLE" : "SHOW CONSOLE" } {(warnings.length > 0 ? ` (${warnings.length})` : "")}
+          </button>
+                    <div className="h-4 w-px bg-ctp-surface1" />
+
+          <p className={`text-xs font-medium uppercase`}>
             {status}
-          </span>
+          </p>
+          <div className="h-4 w-px bg-ctp-surface1" />
+          <p className="text-xs text-ctp-subtext0 font-medium uppercase">{objectCount} OBJECTS</p>
         </div>
-        <span>{filePath ? filePath.split("/").pop() : "unsaved"}</span>
+        <p className="text-xs text-ctp-subtext0 font-medium uppercase">{fileName}</p>
       </div>
     </div>
   );

@@ -9,8 +9,10 @@ interface VariablePanelProps {
 
 export function VariablePanel({ params, onChange, onChangeComplete }: VariablePanelProps) {
   return (
-    <div className="var-panel">
-      <div className="var-header">Variables ({params.length})</div>
+    <div className="border-t border-ctp-surface1 px-3 py-2 bg-ctp-mantle max-h-[200px] overflow-y-auto">
+      <div className="text-xs text-ctp-subtext0 uppercase tracking-wider mb-1.5">
+        Variables ({params.length})
+      </div>
       {params.map((param, i) => (
         <ParamRow
           key={i}
@@ -54,8 +56,8 @@ function ParamRow({
   }, [onChangeComplete]);
 
   return (
-    <div className="var-row">
-      <label>{name}</label>
+    <div className="flex items-center gap-2 mb-1">
+      <label className="min-w-[100px] text-ctp-subtext0 text-xs">{name}</label>
       <input
         type="range"
         min={min}
@@ -64,8 +66,9 @@ function ParamRow({
         defaultValue={defaultVal}
         onChange={handleChange}
         onMouseUp={handleMouseUp}
+        className="flex-1 accent-ctp-mauve"
       />
-      <span className="var-value">
+      <span className="min-w-[50px] text-right text-xs text-ctp-overlay1">
         {isFloat ? defaultVal.toFixed(2) : defaultVal}
       </span>
     </div>
