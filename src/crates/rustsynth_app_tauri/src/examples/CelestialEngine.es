@@ -1,3 +1,8 @@
+set camera_eye [-127.018897 95.395813 -100.837564]
+set camera_target [-0.203413 -0.791543 -8.623451]
+set camera_up [0 1 0]
+set camera_fov 45
+
 set maxdepth 300
 set background #050510
 

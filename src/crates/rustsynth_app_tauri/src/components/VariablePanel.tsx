@@ -9,7 +9,7 @@ interface VariablePanelProps {
 
 export function VariablePanel({ params, onChange, onChangeComplete }: VariablePanelProps) {
   return (
-    <div className="border-t border-ctp-surface1 px-3 py-2 bg-ctp-mantle max-h-[200px] overflow-y-auto">
+    <div className="border-t border-ctp-surface1 px-3 py-2 bg-ctp-mantle max-h-50px overflow-y-auto">
       <div className="text-xs text-ctp-subtext0 uppercase tracking-wider mb-1.5">
         Variables ({params.length})
       </div>

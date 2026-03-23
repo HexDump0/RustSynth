@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { getBackend, type Backend } from "./backend";
 import type { BuildConfig, GuiParam, Scene } from "./types";
 import { Viewport } from "./components/Viewport";
@@ -88,6 +88,9 @@ function App() {
   const [selectedExampleLabel, setSelectedExampleLabel] = useState("EXAMPLES");
   const [filePath, setFilePath] = useState<string | null>(null);
   const [backend, setBackend] = useState<Backend | null>(null);
+  const [editorWidthPct, setEditorWidthPct] = useState(50);
+  const splitContainerRef = useRef<HTMLDivElement | null>(null);
+  const isResizingRef = useRef(false);
 
   const buildConfig = useCallback((): BuildConfig => ({
     max_generations: 1000,
@@ -124,6 +127,36 @@ function App() {
   useEffect(() => {
     if (backend) runScript();
   }, [backend]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const handlePointerMove = (e: PointerEvent) => {
+      if (!isResizingRef.current) return;
+      const container = splitContainerRef.current;
+      if (!container) return;
+
+      const rect = container.getBoundingClientRect();
+      if (rect.width <= 0) return;
+
+      const nextPct = ((e.clientX - rect.left) / rect.width) * 100;
+      const clamped = Math.max(20, Math.min(80, nextPct));
+      setEditorWidthPct(clamped);
+    };
+
+    const handlePointerUp = () => {
+      if (!isResizingRef.current) return;
+      isResizingRef.current = false;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+    };
+  }, []);
 
   const handleParamChange = useCallback((name: string, value: string) => {
     setSource(prev => {
@@ -249,16 +282,32 @@ function App() {
         onExportObj={handleExportObj}
       />
 
-      <div className="grid grid-cols-2 flex-1 min-h-0">
-        <Editor
-          fileName={fileName}
-          source={source}
-          onSourceChange={setSource}
-          onKeyDown={handleKeyDown}
-          showConsole={showConsole}
-          warnings={warnings}
+      <div ref={splitContainerRef} className="flex flex-1 min-h-0">
+        <div className="min-w-0" style={{ width: `${editorWidthPct}%` }}>
+          <Editor
+            fileName={fileName}
+            source={source}
+            onSourceChange={setSource}
+            onKeyDown={handleKeyDown}
+            showConsole={showConsole}
+            warnings={warnings}
+          />
+        </div>
+
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize editor and viewport"
+          className="w-1 shrink-0 cursor-col-resize bg-ctp-mantle hover:bg-ctp-surface0 transition-colors"
+          onPointerDown={e => {
+            e.preventDefault();
+            isResizingRef.current = true;
+            document.body.style.cursor = "col-resize";
+            document.body.style.userSelect = "none";
+          }}
         />
-        <div className="bg-black flex-1">
+
+        <div className="bg-black flex-1 min-w-0">
           <Viewport scene={scene} onInsertCameraToCode={handleInsertCameraToCode} />
         </div>
       </div>
