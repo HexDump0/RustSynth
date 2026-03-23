@@ -1,3 +1,8 @@
+set camera_eye [-21.906634 25.703905 64.490958]
+set camera_target [13.53033 3.935075 4.414238]
+set camera_up [0 1 0]
+set camera_fov 45
+
 set maxobjects 16000
 10 * { y 1 } 10 * { z 1 }  1 * { a 0.8  sat 0.9  } r1 
 set background #fff

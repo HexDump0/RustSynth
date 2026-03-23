@@ -7,6 +7,13 @@ import { MenuBar } from "./components/MenuBar";
 import { Editor } from "./components/Editor";
 import { StatusBar } from "./components/StatusBar";
 
+type ScriptCameraInsert = {
+  eye: [number, number, number];
+  target: [number, number, number];
+  up: [number, number, number];
+  fov?: number;
+};
+
 const EXAMPLES = Object.entries(
   import.meta.glob("./examples/**/*.es", {
     eager: true,
@@ -21,7 +28,12 @@ const EXAMPLES = Object.entries(
   .sort((a, b) => a.path.localeCompare(b.path));
 
 
-const DEFAULT_SCRIPT = `set maxobjects 16000
+const DEFAULT_SCRIPT = `set camera_eye [-21.906634 25.703905 64.490958]
+set camera_target [13.53033 3.935075 4.414238]
+set camera_up [0 1 0]
+set camera_fov 45
+
+set maxobjects 16000
 10 * { y 1 } 10 * { z 1 }  1 * { a 0.8  sat 0.9  } r1 
 set background #fff
 
@@ -61,8 +73,7 @@ rule xbox {
 rule xbox {
  { s 1.1   color #000     } grid
  { b 0.7  color #fff      } box
-}
-`;
+}`;
 
 function App() {
   const [source, setSource] = useState(DEFAULT_SCRIPT);
@@ -213,6 +224,10 @@ function App() {
     }
   }, [runScript]);
 
+  const handleInsertCameraToCode = useCallback((camera: ScriptCameraInsert) => {
+    setSource(prev => insertOrReplaceCameraBlock(prev, camera));
+  }, []);
+
   const fileName = filePath ? filePath.split("/").pop() : "unsaved";
 
   return (
@@ -244,7 +259,7 @@ function App() {
           warnings={warnings}
         />
         <div className="bg-black flex-1">
-          <Viewport scene={scene} />
+          <Viewport scene={scene} onInsertCameraToCode={handleInsertCameraToCode} />
         </div>
       </div>
 
@@ -259,6 +274,43 @@ function App() {
 
     </div>
   );
+}
+
+function fmtNum(v: number): string {
+  if (!Number.isFinite(v)) return "0";
+  const rounded = Math.round(v * 1_000_000) / 1_000_000;
+  const text = rounded.toString();
+  return text === "-0" ? "0" : text;
+}
+
+function fmtVec3(v: [number, number, number]): string {
+  return `[${fmtNum(v[0])} ${fmtNum(v[1])} ${fmtNum(v[2])}]`;
+}
+
+function insertOrReplaceCameraBlock(source: string, camera: ScriptCameraInsert): string {
+  const lines = source.split("\n");
+  const filtered = lines.filter(line => {
+    const trimmed = line.trim().toLowerCase();
+    return !(
+      trimmed.startsWith("set camera ") ||
+      trimmed.startsWith("set camera_eye ") ||
+      trimmed.startsWith("set camera_target ") ||
+      trimmed.startsWith("set camera_up ") ||
+      trimmed.startsWith("set camera_fov ")
+    );
+  });
+
+  const block: string[] = [
+    `set camera_eye ${fmtVec3(camera.eye)}`,
+    `set camera_target ${fmtVec3(camera.target)}`,
+    `set camera_up ${fmtVec3(camera.up)}`,
+  ];
+  if (typeof camera.fov === "number" && Number.isFinite(camera.fov)) {
+    block.push(`set camera_fov ${fmtNum(camera.fov)}`);
+  }
+  block.push("");
+
+  return [...block, ...filtered].join("\n");
 }
 
 export default App;

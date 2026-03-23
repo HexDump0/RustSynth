@@ -57,7 +57,7 @@ function ParamRow({
 
   return (
     <div className="flex items-center gap-2 mb-1">
-      <label className="min-w-[100px] text-ctp-subtext0 text-xs">{name}</label>
+      <label className="min-w-24 text-ctp-subtext0 text-xs">{name}</label>
       <input
         type="range"
         min={min}
@@ -68,7 +68,7 @@ function ParamRow({
         onMouseUp={handleMouseUp}
         className="flex-1 accent-ctp-mauve"
       />
-      <span className="min-w-[50px] text-right text-xs text-ctp-overlay1">
+      <span className="min-w-12 text-right text-xs text-ctp-overlay1">
         {isFloat ? defaultVal.toFixed(2) : defaultVal}
       </span>
     </div>
