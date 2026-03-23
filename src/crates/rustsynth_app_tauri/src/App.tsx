@@ -7,25 +7,60 @@ import { MenuBar } from "./components/MenuBar";
 import { Editor } from "./components/Editor";
 import { StatusBar } from "./components/StatusBar";
 
+const EXAMPLES = Object.entries(
+  import.meta.glob("./examples/**/*.es", {
+    eager: true,
+    query: "?raw",
+    import: "default",
+  }) as Record<string, string>
+)
+  .map(([path, content]) => {
+    const relative = path.replace("./examples/", "");
+    return { path: relative, content };
+  })
+  .sort((a, b) => a.path.localeCompare(b.path));
 
-const DEFAULT_SCRIPT = `set background #111
-set maxdepth 200
 
-r0
+const DEFAULT_SCRIPT = `set maxobjects 16000
+10 * { y 1 } 10 * { z 1 }  1 * { a 0.8  sat 0.9  } r1 
+set background #fff
 
-rule r0 {
-  3 * { rz 120 } R1
-  3 * { rz 120 } R2
+
+rule r1   {
+  { x 1  ry 4 } r1
+  xbox
 }
 
-rule R1 {
-  { x 1.3 rx 1.57 rz 6 ry 3 s 0.99 hue 0.4 sat 0.99 } R1
-  { s 4 } sphere
+rule r1   {
+{ x 1  ry -4  } r1
+xbox
 }
 
-rule R2 {
-  { x -1.3 rz 6 ry 3 s 0.99 hue 0.4 sat 0.99 } R2
-  { s 4 } box
+rule r1   {
+{ x 1  rz -8  s 0.95 } r1
+xbox
+}
+
+rule r1   {
+{ x 1  rz 8  s 0.95   } r1
+xbox
+}
+
+
+
+rule r2 maxdepth 36 {
+{ ry 1  ry -13 x  1.2 b 0.99 h 12  } r2 
+xbox
+}
+
+rule xbox {
+  { s 1.1   color #000   } grid
+  { b 0.7  color #000    }  box
+}
+
+rule xbox {
+ { s 1.1   color #000     } grid
+ { b 0.7  color #fff      } box
 }
 `;
 
@@ -39,6 +74,7 @@ function App() {
   const [showConsole, setShowConsole] = useState(false);
   const [seed, setSeed] = useState(0);
   const [maxObjects, setMaxObjects] = useState(100000);
+  const [selectedExampleLabel, setSelectedExampleLabel] = useState("EXAMPLES");
   const [filePath, setFilePath] = useState<string | null>(null);
   const [backend, setBackend] = useState<Backend | null>(null);
 
@@ -97,9 +133,9 @@ function App() {
   }, []);
 
   const handleNewFile = useCallback(() => {
-    setSource(DEFAULT_SCRIPT);
+    setSource("");
     setFilePath(null);
-    setStatus("New file");
+    setSelectedExampleLabel("EXAMPLES");
   }, []);
 
   const handleOpenFile = useCallback(async () => {
@@ -109,11 +145,20 @@ function App() {
       if (!result) return;
       setSource(result.content);
       setFilePath(result.path);
+      setSelectedExampleLabel("EXAMPLES");
       setStatus(`Opened: ${result.path.split("/").pop()}`);
     } catch (e) {
       setStatus(`Open error: ${e}`);
     }
   }, [backend]);
+
+  const handleSelectExample = useCallback((examplePath: string) => {
+    const selected = EXAMPLES.find(example => example.path === examplePath);
+    if (!selected) return;
+    setSource(selected.content);
+    setFilePath(`examples/${selected.path}`);
+    setSelectedExampleLabel(selected.path);
+  }, []);
 
   const handleSaveFile = useCallback(async () => {
     if (!backend) return;
@@ -177,8 +222,11 @@ function App() {
       <MenuBar
         seed={seed}
         maxObjects={maxObjects}
+        examples={EXAMPLES.map(example => example.path)}
+        selectedExampleLabel={selectedExampleLabel}
         onSeedChange={setSeed}
         onMaxObjectsChange={setMaxObjects}
+        onExampleSelect={handleSelectExample}
         onNewFile={handleNewFile}
         onOpenFile={handleOpenFile}
         onSaveFile={handleSaveFile}

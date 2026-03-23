@@ -1,8 +1,13 @@
+import { useEffect, useRef, useState } from "react";
+
 type MenuBarParams = {
   seed: number;
   maxObjects: number;
+  examples: string[];
+  selectedExampleLabel: string;
   onSeedChange: (value: number) => void;
   onMaxObjectsChange: (value: number) => void;
+  onExampleSelect: (examplePath: string) => void;
   onNewFile: () => void;
   onOpenFile: () => void;
   onSaveFile: () => void;
@@ -11,6 +16,31 @@ type MenuBarParams = {
 };
 
 export function MenuBar(params: MenuBarParams) {
+  const [examplesOpen, setExamplesOpen] = useState(false);
+  const examplesRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!examplesRef.current) return;
+      if (!examplesRef.current.contains(event.target as Node)) {
+        setExamplesOpen(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setExamplesOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
+
   return (
     <div className="h-12 bg-ctp-base px-6 flex items-center justify-between shrink-0">
       <div className="flex items-center gap-6">
@@ -33,6 +63,44 @@ export function MenuBar(params: MenuBarParams) {
           >
             SAVE
           </button>
+        </div>
+        <div className="h-6 w-px bg-ctp-surface1" />
+        <div ref={examplesRef} className="relative">
+          <button
+            onClick={() => setExamplesOpen(v => !v)}
+            className="bg-ctp-crust px-3 py-1 text-sm font-mono text-ctp-subtext1 tracking-wide uppercase hover:text-ctp-mauve transition-colors cursor-pointer min-w-40 flex items-center justify-between gap-2"
+            type="button"
+            title={params.selectedExampleLabel}
+          >
+            <span className="truncate max-w-48 text-left">{params.selectedExampleLabel}</span>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="12"
+              height="12"
+              viewBox="0 0 16 16"
+              className={`transition-transform ${examplesOpen ? "rotate-180" : "rotate-0"}`}
+            >
+              <path fill="currentColor" d="M3.2 5.5L8 10.3l4.8-4.8l1 1L8 12.3L2.2 6.5z" />
+            </svg>
+          </button>
+          {examplesOpen && (
+            <div className="absolute left-0 top-full mt-1 z-20 w-72 max-h-72 overflow-y-auto border border-ctp-surface1 bg-ctp-crust shadow-xl">
+              {params.examples.map(example => (
+                <button
+                  key={example}
+                  type="button"
+                  onClick={() => {
+                    params.onExampleSelect(example);
+                    setExamplesOpen(false);
+                  }}
+                  className="w-full text-left px-3 py-2 text-sm font-mono text-ctp-subtext1 hover:text-ctp-mauve hover:bg-ctp-surface0 transition-colors"
+                  title={example}
+                >
+                  {example}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         <div className="h-6 w-px bg-ctp-surface1" />
         <div className="flex items-center justify-center gap-6">
