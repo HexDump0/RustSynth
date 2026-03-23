@@ -26,6 +26,8 @@ function getSharedGeometry(kind: string): THREE.BufferGeometry {
       break;
     case "Line":
       geo = new THREE.CylinderGeometry(0.02, 0.02, 1, 6);
+      // Legacy line primitive is along local X, centered on the YZ plane.
+      geo.rotateZ(Math.PI / 2);
       break;
     case "Dot":
       geo = new THREE.SphereGeometry(0.05, 8, 6);

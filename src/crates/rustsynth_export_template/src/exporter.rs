@@ -287,9 +287,11 @@ impl TemplateExporter {
     }
 
     fn apply_line(&mut self, prim: &TemplatePrimitive, obj: &rustsynth_scene::object::SceneObject) -> String {
-        // Line: base is `from`, base + dir3 is `to`.
-        let (base, _dir1, _dir2, dir3) = decompose_transform(obj);
-        let to = base + dir3;
+        // Legacy Structure Synth convention:
+        // line is along local X, centered on the YZ plane.
+        let (base, dir1, _dir2, _dir3) = decompose_transform(obj);
+        let from = base - dir1 * 0.5;
+        let to = base + dir1 * 0.5;
         let uid = if prim.contains("{uid}") {
             self.next_uid("Line")
         } else {
@@ -297,9 +299,9 @@ impl TemplateExporter {
         };
 
         let mut subs: Vec<(&str, String)> = vec![
-            ("{x1}", fmt(base.x)),
-            ("{y1}", fmt(base.y)),
-            ("{z1}", fmt(base.z)),
+            ("{x1}", fmt(from.x)),
+            ("{y1}", fmt(from.y)),
+            ("{z1}", fmt(from.z)),
             ("{x2}", fmt(to.x)),
             ("{y2}", fmt(to.y)),
             ("{z2}", fmt(to.z)),
@@ -497,6 +499,24 @@ mod tests {
         assert!(out.contains("BBox0"));
         assert!(out.contains("BBox1"));
         assert!(out.contains("BBox2"));
+    }
+
+    #[test]
+    fn export_line_uses_local_x_centered_endpoints() {
+        const XML: &str = r#"<template name="T"><primitive name="line">{x1},{y1},{z1}|{x2},{y2},{z2}</primitive></template>"#;
+        let t = Template::from_xml(XML).unwrap();
+        let mut exporter = TemplateExporter::new(t);
+        let mut scene = Scene::default();
+        scene.objects.push(SceneObject {
+            kind: PrimitiveKind::Line,
+            transform: Mat4::IDENTITY,
+            color: Rgba::WHITE,
+            alpha: 1.0,
+            tag: None,
+        });
+
+        let out = exporter.export(&scene).unwrap();
+        assert_eq!(out, "-0.5,0,0|0.5,0,0");
     }
 }
 

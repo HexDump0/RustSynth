@@ -127,7 +127,10 @@ impl ObjExporter {
                     entry.group.merge(sub);
                 }
                 PrimitiveKind::Line => {
-                    add_line_to_group(&mut entry.group, base, base + dir3);
+                    // Legacy Structure Synth convention:
+                    // line is along local X, centered on the YZ plane.
+                    // Midpoint is at `base`, endpoints are ±0.5 along `dir1`.
+                    add_line_to_group(&mut entry.group, base - dir1 * 0.5, base + dir1 * 0.5);
                 }
                 PrimitiveKind::Dot => {
                     add_dot_to_group(&mut entry.group, base);
@@ -327,6 +330,8 @@ mod tests {
         let exp = ObjExporter::default();
         let out = exp.export(&make_scene(PrimitiveKind::Line)).unwrap();
         assert!(out.obj.contains("\nl "), "expected line record");
+        assert!(out.obj.contains("\nv -0.5 0 0\n"), "expected line start at -0.5 on X");
+        assert!(out.obj.contains("\nv 0.5 0 0\n"), "expected line end at +0.5 on X");
     }
 
     #[test]
