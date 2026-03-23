@@ -39,6 +39,7 @@ function App() {
   const [filePath, setFilePath] = useState<string | null>(null);
   const [backend, setBackend] = useState<Backend | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const gutterRef = useRef<HTMLDivElement>(null);
 
   const buildConfig = useCallback((): BuildConfig => ({
     max_generations: 1000,
@@ -53,7 +54,7 @@ function App() {
   const runScript = useCallback(async () => {
     if (!backend) return;
     try {
-      setStatus("Building...");
+      setStatus("BUILDING");
       const result = await backend.runScript(source, buildConfig());
       setScene(result.scene);
       setObjectCount(result.scene.objects.length);
@@ -64,7 +65,7 @@ function App() {
         `READY`
       );
     } catch (e) {
-      setStatus(`Error: ${e}`);
+      setStatus(`ERROR: ${e}`);
       setWarnings([`${e}`]);
     }
   }, [backend, source, buildConfig]);
@@ -168,6 +169,7 @@ function App() {
   }, [runScript]);
 
   const fileName = filePath ? filePath.split("/").pop() : "unsaved";
+  const lineCount = source.split("\n").length;
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-ctp-base text-ctp-text font-sans">
@@ -280,16 +282,31 @@ function App() {
         <div className="flex flex-col h-full">
           <div className="w-full h-8 bg-ctp-mantle flex justify-between items-center px-6">
             <p className="text-ctp-mauve uppercase text-xs font-semibold">{fileName}</p>
-            <p className="text-ctp-overlay1 text-xs">Ctrl+Enter to run</p>
+            <p className="text-ctp-overlay1 text-xs">CTRL+ENTER</p>
           </div>
-          <textarea
-            ref={textareaRef}
-            value={source}
-            onChange={e => setSource(e.target.value)}
-            onKeyDown={handleKeyDown}
-            spellCheck={false}
-            className="bg-ctp-crust p-2.5 text-sm leading-relaxed overflow-auto whitespace-pre font-mono flex-1 min-h-0 resize-none outline-none text-ctp-text"
-          />
+          <div className="flex flex-1 min-h-0 bg-ctp-crust">
+            <div
+              ref={gutterRef}
+              className="w-10 shrink-0 overflow-hidden text-ctp-overlay0 text-right text-sm leading-relaxed font-mono select-none py-2.5 px-3"
+            >
+              {Array.from({ length: lineCount }, (_, i) => (
+                <div key={i + 1}>{i + 1}</div>
+              ))}
+            </div>
+            <textarea
+              ref={textareaRef}
+              value={source}
+              onChange={e => setSource(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onScroll={e => {
+                if (gutterRef.current) {
+                  gutterRef.current.scrollTop = e.currentTarget.scrollTop;
+                }
+              }}
+              spellCheck={false}
+              className="bg-ctp-crust py-2.5 text-sm leading-relaxed overflow-auto whitespace-pre font-mono flex-1 min-h-0 resize-none outline-none text-ctp-text pl-2"
+            />
+          </div>
           {guiParams.length > 0 && (
             <VariablePanel
               params={guiParams}

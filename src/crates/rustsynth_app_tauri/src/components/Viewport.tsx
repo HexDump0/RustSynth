@@ -2,6 +2,7 @@ import { useMemo, useRef, useEffect, memo } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { OrbitControls, GizmoHelper, GizmoViewport } from "@react-three/drei";
 import * as THREE from "three";
+import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import type { Scene, SceneObject, PrimitiveKind } from "../types";
 
 // ── Shared geometry singletons (avoid recreating per InstancedGroup) ──
@@ -46,6 +47,8 @@ interface ViewportProps {
 }
 
 export function Viewport({ scene }: ViewportProps) {
+  const controlsRef = useRef<OrbitControlsImpl | null>(null);
+
   const bgColor = useMemo(() => {
     if (scene?.background) {
       const { r, g, b } = scene.background;
@@ -55,24 +58,36 @@ export function Viewport({ scene }: ViewportProps) {
   }, [scene?.background]);
 
   return (
-    <Canvas
-      camera={{ position: [3, 3, 5], fov: 45, near: 0.01, far: 1000 }}
-      style={{ width: "100%", height: "100%" }}
-      gl={{ antialias: true, powerPreference: "high-performance" }}
-      frameloop="demand"
-    >
-      <color attach="background" args={[bgColor.r, bgColor.g, bgColor.b]} />
-      <ambientLight intensity={0.4} />
-      <directionalLight position={[5, 8, 5]} intensity={0.8} />
-      <directionalLight position={[-3, 2, -4]} intensity={0.3} />
+    <div className="relative w-full h-full">
+      <Canvas
+        camera={{ position: [3, 3, 5], fov: 45, near: 0.01, far: 1000 }}
+        style={{ width: "100%", height: "100%" }}
+        gl={{ antialias: true, powerPreference: "high-performance" }}
+        frameloop="demand"
+      >
+        <color attach="background" args={[bgColor.r, bgColor.g, bgColor.b]} />
+        <ambientLight intensity={0.4} />
+        <directionalLight position={[5, 8, 5]} intensity={0.8} />
+        <directionalLight position={[-3, 2, -4]} intensity={0.3} />
 
-      {scene && <SceneRenderer objects={scene.objects} />}
+        {scene && <SceneRenderer objects={scene.objects} />}
 
-      <OrbitControls makeDefault enableDamping dampingFactor={0.1} />
-      <GizmoHelper alignment="bottom-right" margin={[60, 60]}>
-        <GizmoViewport labelColor="white" axisHeadScale={0.8} />
-      </GizmoHelper>
-    </Canvas>
+        <OrbitControls ref={controlsRef} makeDefault enableDamping dampingFactor={0.1} />
+        <GizmoHelper alignment="bottom-right" margin={[60, 60]}>
+          <GizmoViewport labelColor="white" axisHeadScale={0.8} />
+        </GizmoHelper>
+      </Canvas>
+
+      <button
+        onClick={() => {
+          controlsRef.current?.reset();
+          controlsRef.current?.update();
+        }}
+        className="absolute bottom-3 left-3 bg-ctp-crust p-2 transition-colors cursor-pointer text-ctp-subtext1 hover:text-ctp-mauve"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 16 16"><path fill="currentColor" d="M14 8a5.98 5.98 0 0 1-1.759 4.243A5.98 5.98 0 0 1 8 14a6 6 0 0 1-4.243-1.758a6 6 0 0 1-1.285-1.905a.75.75 0 1 1 1.38-.586c.229.537.553 1.019.966 1.43c.412.414.894.738 1.431.967a4.55 4.55 0 0 0 3.503 0a4.5 4.5 0 0 0 1.429-.965A4.5 4.5 0 0 0 12.501 8a4.48 4.48 0 0 0-1.319-3.181a4.5 4.5 0 0 0-1.431-.967a4.55 4.55 0 0 0-3.503 0A4.5 4.5 0 0 0 4.257 5.5h1.992a.75.75 0 0 1 0 1.5h-3.5a.75.75 0 0 1-.75-.75v-3.5a.75.75 0 0 1 1.5 0v1.282q.124-.142.259-.275a6 6 0 0 1 1.904-1.285a6.04 6.04 0 0 1 4.673 0a6 6 0 0 1 1.907 1.286A6 6 0 0 1 13.999 8z"/></svg>
+      </button>
+    </div>
   );
 }
 
