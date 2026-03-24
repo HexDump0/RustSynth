@@ -156,6 +156,8 @@ type EditorParams = {
   onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   showConsole: boolean;
   warnings: string[];
+  consoleHeight: number;
+  onConsoleResizeStart: (startY: number, startHeight: number) => void;
 };
 
 export function Editor(params: EditorParams) {
@@ -214,11 +216,26 @@ export function Editor(params: EditorParams) {
         </div>
       </div>
       {params.showConsole && (
-        <div className="border-t border-ctp-surface1 h-32 overflow-y-auto bg-ctp-crust px-3 py-2 text-sm text-ctp-subtext0 whitespace-pre-wrap font-mono shrink-0">
-          {params.warnings.length === 0
-            ? "No warnings."
-            : params.warnings.map((w, i) => <div key={i}>{w}</div>)}
-        </div>
+        <>
+          <div
+            role="separator"
+            aria-orientation="horizontal"
+            aria-label="Resize console"
+            className="h-1 shrink-0 cursor-row-resize bg-ctp-surface hover:bg-ctp-surface0 transition-colors"
+            onPointerDown={e => {
+              e.preventDefault();
+              params.onConsoleResizeStart(e.clientY, params.consoleHeight);
+            }}
+          />
+          <div
+            className="overflow-y-auto bg-ctp-crust px-3 py-2 text-sm text-ctp-subtext0 whitespace-pre-wrap font-mono shrink-0 "
+            style={{ height: params.consoleHeight }}
+          >
+            {params.warnings.length === 0
+              ? "No warnings."
+              : params.warnings.map((w, i) => <div key={i}>{w}</div>)}
+          </div>
+        </>
       )}
     </div>
   );

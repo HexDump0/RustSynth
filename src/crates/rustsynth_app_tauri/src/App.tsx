@@ -89,8 +89,13 @@ function App() {
   const [filePath, setFilePath] = useState<string | null>(null);
   const [backend, setBackend] = useState<Backend | null>(null);
   const [editorWidthPct, setEditorWidthPct] = useState(50);
+  const [consoleHeight, setConsoleHeight] = useState(128);
   const splitContainerRef = useRef<HTMLDivElement | null>(null);
+  const editorContainerRef = useRef<HTMLDivElement | null>(null);
   const isResizingRef = useRef(false);
+  const isResizingConsoleRef = useRef(false);
+  const consoleResizeStartY = useRef(0);
+  const consoleResizeStartHeight = useRef(0);
 
   const buildConfig = useCallback((): BuildConfig => ({
     max_generations: 1000,
@@ -130,23 +135,39 @@ function App() {
 
   useEffect(() => {
     const handlePointerMove = (e: PointerEvent) => {
-      if (!isResizingRef.current) return;
-      const container = splitContainerRef.current;
-      if (!container) return;
-
-      const rect = container.getBoundingClientRect();
-      if (rect.width <= 0) return;
-
-      const nextPct = ((e.clientX - rect.left) / rect.width) * 100;
-      const clamped = Math.max(20, Math.min(80, nextPct));
-      setEditorWidthPct(clamped);
+      // Handle horizontal editor/viewport resize
+      if (isResizingRef.current) {
+        const container = splitContainerRef.current;
+        if (container) {
+          const rect = container.getBoundingClientRect();
+          if (rect.width > 0) {
+            const nextPct = ((e.clientX - rect.left) / rect.width) * 100;
+            const clamped = Math.max(20, Math.min(80, nextPct));
+            setEditorWidthPct(clamped);
+          }
+        }
+      }
+      
+      // Handle vertical console resize
+      if (isResizingConsoleRef.current) {
+        const deltaY = consoleResizeStartY.current - e.clientY;
+        const newHeight = consoleResizeStartHeight.current + deltaY;
+        const clamped = Math.max(32, Math.min(400, newHeight));
+        setConsoleHeight(clamped);
+      }
     };
 
     const handlePointerUp = () => {
-      if (!isResizingRef.current) return;
-      isResizingRef.current = false;
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
+      if (isResizingRef.current) {
+        isResizingRef.current = false;
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+      }
+      if (isResizingConsoleRef.current) {
+        isResizingConsoleRef.current = false;
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+      }
     };
 
     window.addEventListener("pointermove", handlePointerMove);
@@ -283,7 +304,7 @@ function App() {
       />
 
       <div ref={splitContainerRef} className="flex flex-1 min-h-0">
-        <div className="min-w-0" style={{ width: `${editorWidthPct}%` }}>
+        <div ref={editorContainerRef} className="min-w-0 flex flex-col" style={{ width: `${editorWidthPct}%` }}>
           <Editor
             fileName={fileName}
             source={source}
@@ -291,6 +312,14 @@ function App() {
             onKeyDown={handleKeyDown}
             showConsole={showConsole}
             warnings={warnings}
+            consoleHeight={consoleHeight}
+            onConsoleResizeStart={(startY, startHeight) => {
+              consoleResizeStartY.current = startY;
+              consoleResizeStartHeight.current = startHeight;
+              isResizingConsoleRef.current = true;
+              document.body.style.cursor = "row-resize";
+              document.body.style.userSelect = "none";
+            }}
           />
         </div>
 
