@@ -173,7 +173,7 @@ export function Editor(params: EditorParams) {
         <p className="text-ctp-mauve uppercase text-xs font-semibold">{params.fileName}</p>
         <p className="text-ctp-overlay1 text-xs">CTRL+ENTER</p>
       </div>
-      <div className="flex flex-1 min-h-0 bg-ctp-crust overflow-hidden">
+      <div id="tour-editor" className="flex flex-1 min-h-0 bg-ctp-crust overflow-hidden">
         <div
           ref={gutterRef}
           className="w-10 shrink-0 overflow-hidden text-ctp-overlay0 text-right text-sm leading-relaxed font-mono select-none py-2.5 px-3"

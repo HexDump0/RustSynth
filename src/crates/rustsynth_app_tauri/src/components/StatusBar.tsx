@@ -9,7 +9,7 @@ type StatusBarParams = {
 
 export function StatusBar(params: StatusBarParams) {
   return (
-    <div className="bg-ctp-mantle px-6 py-2 w-full flex justify-between shrink-0">
+    <div id="tour-status" className="bg-ctp-mantle px-6 py-2 w-full flex justify-between shrink-0">
       <div className="flex gap-7">
         <button
           onClick={params.onToggleConsole}

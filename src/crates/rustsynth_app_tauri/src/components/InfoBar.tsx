@@ -25,6 +25,7 @@ export function InfoBar(params: { github: string; docs: string }) {
             target="_blank"
             rel="noreferrer"
             className="flex gap-1 font-bold justify-center items-center text-ctp-text hover:text-ctp-mauve transition-colors"
+            id="tour-docs"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 16 16">
               <path fill="currentColor"

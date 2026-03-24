@@ -13,6 +13,7 @@ type MenuBarParams = {
   onSaveFile: () => void;
   onRun: () => void;
   onExportObj: () => void;
+  onStartOnboarding: () => void;
 };
 
 export function MenuBar(params: MenuBarParams) {
@@ -65,7 +66,7 @@ export function MenuBar(params: MenuBarParams) {
           </button>
         </div>
         <div className="h-6 w-px bg-ctp-surface1" />
-        <div ref={examplesRef} className="relative">
+        <div id="tour-examples" ref={examplesRef} className="relative">
           <button
             onClick={() => setExamplesOpen(v => !v)}
             className="bg-ctp-crust px-3 py-1 text-sm font-mono text-ctp-subtext1 tracking-wide uppercase hover:text-ctp-mauve transition-colors cursor-pointer min-w-40 flex items-center justify-between gap-2"
@@ -129,6 +130,7 @@ export function MenuBar(params: MenuBarParams) {
       </div>
       <div className="flex items-center justify-center gap-6">
         <button
+          id="tour-run"
           onClick={params.onRun}
           className="bg-ctp-mauve px-4 py-1 text-sm font-mono tracking-wide flex justify-between gap-2 text-ctp-base items-center hover:opacity-90 transition-opacity cursor-pointer font-semibold"
         >

@@ -6,6 +6,7 @@ import { InfoBar } from "./components/InfoBar";
 import { MenuBar } from "./components/MenuBar";
 import { Editor } from "./components/Editor";
 import { StatusBar } from "./components/StatusBar";
+import { useRustSynthOnboarding } from "./onboarding";
 
 type ScriptCameraInsert = {
   eye: [number, number, number];
@@ -281,6 +282,7 @@ function App() {
   const handleInsertCameraToCode = useCallback((camera: ScriptCameraInsert) => {
     setSource(prev => insertOrReplaceCameraBlock(prev, camera));
   }, []);
+  const { startOnboarding } = useRustSynthOnboarding();
 
   const fileName = filePath ? filePath.split("/").pop() : "unsaved";
 
@@ -301,6 +303,7 @@ function App() {
         onSaveFile={handleSaveFile}
         onRun={runScript}
         onExportObj={handleExportObj}
+        onStartOnboarding={startOnboarding}
       />
 
       <div ref={splitContainerRef} className="flex flex-1 min-h-0">

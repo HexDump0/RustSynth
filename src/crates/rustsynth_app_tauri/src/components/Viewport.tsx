@@ -70,7 +70,7 @@ export function Viewport({ scene, onInsertCameraToCode }: ViewportProps) {
   }, [scene?.background]);
 
   return (
-    <div className="relative w-full h-full">
+    <div id="tour-viewport" className="relative w-full h-full">
       <Canvas
         camera={{ position: [3, 3, 5], fov: 45, near: 0.01, far: 1000 }}
         style={{ width: "100%", height: "100%" }}

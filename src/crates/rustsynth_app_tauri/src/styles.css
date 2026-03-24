@@ -21,3 +21,58 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #6c7086;
 }
+
+.shepherd-element.custom-theme .shepherd-content {
+  background: #1e1e2e;
+  color: #cdd6f4;
+  border-radius: 0;
+}
+
+.shepherd-element.custom-theme .shepherd-header {
+  background: #181825;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+.shepherd-element.custom-theme .shepherd-title {
+  color: #cba6f7;
+  font-family: "Manrope";
+  text-transform: uppercase;
+  font-size: 1.25rem ;
+  font-weight: 700;
+}
+
+.shepherd-element.custom-theme .shepherd-text {
+  color: #bac2de;
+  font-family: "JetBrains Mono", "Fira Code";
+  font-size: 1rem;
+  line-height: 1.5;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+.shepherd-element.custom-theme .shepherd-footer {
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+  padding-bottom: 1.5rem;
+}
+.shepherd-element.custom-theme .shepherd-footer .shepherd-button {
+  border-radius: 0;
+  background: #313244;
+  color: #cdd6f4;
+  font-size: 1rem;
+  line-height: 1.5;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+
+.shepherd-element.custom-theme .shepherd-footer .shepherd-button:last-child {
+  background: #cba6f7;
+  color: #1e1e2e;
+}
+
+.shepherd-element.shepherd-has-title[data-popper-placement^=bottom]>.shepherd-arrow:before, .shepherd-element .shepherd-arrow:before {
+  background-color: #1e1e2e;
+}
