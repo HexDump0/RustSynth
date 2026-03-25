@@ -1,6 +1,6 @@
 {
   "productName": "RustSynth",
-  "identifier": "com.rustsynth.app",
+  "identifier": "com.rustsynth",
   "version": "0.1.0",
   "build": {
     "frontendDist": "../dist",

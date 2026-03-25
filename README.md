@@ -4,7 +4,7 @@ RustSynth is a modern rewrite of Structure Synth for generating 3D scenes and mo
 
 (P.S Take a look at the [docs](https://github.com/HexDump0/RustSynth/blob/main/docs/docs.md) for more info)
 
-![img/app.png](app)
+![app](https://raw.githubusercontent.com/HexDump0/RustSynth/refs/heads/main/img/app.png)
 
 ## Installation
 
