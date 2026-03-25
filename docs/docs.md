@@ -67,6 +67,8 @@ Rotation:
 
 Scale:
 - `s [float]`
+- `s [float] [float] [float]`
+
 
 ## Color
 
@@ -116,7 +118,18 @@ You can also set these settings inside the script itself
 set maxdepth [int]
 ```
 
+# Other cool stuff
+```
+set background [hex] // Sets the color of the background (duh)
+
+// Camera settings
+set camera_eye [-3.33009 0.0259899 -20]
+set camera_target [0.141212 -0.330744 -19.602448]
+set camera_up [0 1 0]
+set camera_fov 45
+```
+
 # Other guides
-https://structuresynth.sourceforge.net/reference.php
-https://structuresynth.sourceforge.net/learn.php
-https://after12am.github.io/eisenscript-docs
+- https://structuresynth.sourceforge.net/reference.php
+- https://structuresynth.sourceforge.net/learn.php
+- https://after12am.github.io/eisenscript-docs

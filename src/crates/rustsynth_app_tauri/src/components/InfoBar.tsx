@@ -11,7 +11,7 @@ export function InfoBar(params: InfoBarParams) {
     <div className="bg-ctp-crust py-4 px-6 flex justify-between items-center shrink-0">
       <div className="flex gap-2 items-end">
         <h1 className="font-bold text-2xl text-ctp-mauve uppercase">RustSynth</h1>
-        <span className="text-xs text-ctp-subtext0 font-mono pb-1">v0.1.0</span>
+        <span className="text-xs text-ctp-subtext0 font-mono pb-1">v0.1.1</span>
       </div>
       <div className="flex justify-center items-center gap-8">
         <a
