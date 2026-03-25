@@ -73,6 +73,15 @@ Options:
 - `--max-generations <u32>`
 - `--mode bfs|dfs`
 
+## Optimizations
+- Using Rust
+    Even though using typescript for the compilation part would be natural I decided to use Rust coz why the hell not. It is very much fast compared to the original version which was written in cpp.
+
+    It takes `0.599s` to compile and export [tree_3d.es](https://raw.githubusercontent.com/HexDump0/RustSynth/refs/heads/main/src/crates/rustsynth_app_tauri/src/examples/Trees%203d.es) while it took `~3.2s` on StructureSynth
+
+- Instanced rendering
+    Objects of the same type are batched into one draw group, reducing draw calls from many per object to a few per group which is how it was done in StructureSynth. (Also using modern browser tech which is already wayy better at rendering stuff)
+
 ## Architecture
 
 - Frontend stack: React + Vite + Three.js
