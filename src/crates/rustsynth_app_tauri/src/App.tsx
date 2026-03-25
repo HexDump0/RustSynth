@@ -288,7 +288,7 @@ function App() {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-ctp-base text-ctp-text font-sans">
-      <InfoBar github="https://github.com/HexDump0/RustSynth" docs="https://github.com/HexDump0/RustSynth/blob/main/DOCS.md"/>
+      <InfoBar github="https://github.com/HexDump0/RustSynth" docs="https://github.com/HexDump0/RustSynth/blob/main/docs/docs.md"/>
 
       <MenuBar
         seed={seed}

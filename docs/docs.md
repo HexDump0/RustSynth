@@ -115,3 +115,8 @@ You can also set these settings inside the script itself
 ```
 set maxdepth [int]
 ```
+
+# Other guides
+https://structuresynth.sourceforge.net/reference.php
+https://structuresynth.sourceforge.net/learn.php
+https://after12am.github.io/eisenscript-docs
