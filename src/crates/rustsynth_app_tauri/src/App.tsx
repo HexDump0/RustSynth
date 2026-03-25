@@ -77,6 +77,7 @@ rule xbox {
 }`;
 
 function App() {
+  const HISTORY_LIMIT = 300;
   const [source, setSource] = useState(DEFAULT_SCRIPT);
   const [scene, setScene] = useState<Scene | null>(null);
   const [status, setStatus] = useState("Ready");
@@ -97,6 +98,29 @@ function App() {
   const isResizingConsoleRef = useRef(false);
   const consoleResizeStartY = useRef(0);
   const consoleResizeStartHeight = useRef(0);
+  const undoStackRef = useRef<string[]>([]);
+  const redoStackRef = useRef<string[]>([]);
+
+  const setSourceWithHistory = useCallback((next: React.SetStateAction<string>) => {
+    setSource(prev => {
+      const nextValue = typeof next === "function" ? next(prev) : next;
+      if (nextValue === prev) return prev;
+
+      undoStackRef.current.push(prev);
+      if (undoStackRef.current.length > HISTORY_LIMIT) {
+        undoStackRef.current.shift();
+      }
+      redoStackRef.current = [];
+
+      return nextValue;
+    });
+  }, []);
+
+  const replaceSource = useCallback((next: string) => {
+    setSource(next);
+    undoStackRef.current = [];
+    redoStackRef.current = [];
+  }, []);
 
   const buildConfig = useCallback((): BuildConfig => ({
     max_generations: 1000,
@@ -181,7 +205,7 @@ function App() {
   }, []);
 
   const handleParamChange = useCallback((name: string, value: string) => {
-    setSource(prev => {
+    setSourceWithHistory(prev => {
       const prefix = `#define ${name} `;
       return prev
         .split("\n")
@@ -196,35 +220,35 @@ function App() {
         })
         .join("\n");
     });
-  }, []);
+  }, [setSourceWithHistory]);
 
   const handleNewFile = useCallback(() => {
-    setSource("");
+    replaceSource("");
     setFilePath(null);
     setSelectedExampleLabel("EXAMPLES");
-  }, []);
+  }, [replaceSource]);
 
   const handleOpenFile = useCallback(async () => {
     if (!backend) return;
     try {
       const result = await backend.openFile();
       if (!result) return;
-      setSource(result.content);
+      replaceSource(result.content);
       setFilePath(result.path);
       setSelectedExampleLabel("EXAMPLES");
       setStatus(`Opened: ${result.path.split("/").pop()}`);
     } catch (e) {
       setStatus(`Open error: ${e}`);
     }
-  }, [backend]);
+  }, [backend, replaceSource]);
 
   const handleSelectExample = useCallback((examplePath: string) => {
     const selected = EXAMPLES.find(example => example.path === examplePath);
     if (!selected) return;
-    setSource(selected.content);
+    replaceSource(selected.content);
     setFilePath(`examples/${selected.path}`);
     setSelectedExampleLabel(selected.path);
-  }, []);
+  }, [replaceSource]);
 
   const handleSaveFile = useCallback(async () => {
     if (!backend) return;
@@ -260,11 +284,63 @@ function App() {
     }
   }, [backend, source, buildConfig]);
 
+  const handleFormatSource = useCallback(() => {
+    setSourceWithHistory(prev => formatCode(prev));
+  }, [setSourceWithHistory]);
+
+  const handleUndo = useCallback(() => {
+    const previous = undoStackRef.current.pop();
+    if (previous === undefined) return;
+
+    redoStackRef.current.push(source);
+    if (redoStackRef.current.length > HISTORY_LIMIT) {
+      redoStackRef.current.shift();
+    }
+
+    setSource(previous);
+  }, [source]);
+
+  const handleRedo = useCallback(() => {
+    const next = redoStackRef.current.pop();
+    if (next === undefined) return;
+
+    undoStackRef.current.push(source);
+    if (undoStackRef.current.length > HISTORY_LIMIT) {
+      undoStackRef.current.shift();
+    }
+
+    setSource(next);
+  }, [source]);
+
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === "z") {
+      e.preventDefault();
+      if (e.shiftKey) {
+        handleRedo();
+      } else {
+        handleUndo();
+      }
+      return;
+    }
+
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === "y") {
+      e.preventDefault();
+      handleRedo();
+      return;
+    }
+
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "f") {
+      e.preventDefault();
+      handleFormatSource();
+      return;
+    }
+
     if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
       e.preventDefault();
       runScript();
+      return;
     }
+
     if (e.key === "Tab" && !e.shiftKey && e.currentTarget instanceof HTMLTextAreaElement) {
       e.preventDefault();
       const ta = e.currentTarget;
@@ -272,16 +348,16 @@ function App() {
       const end = ta.selectionEnd;
       const val = ta.value;
       const next = val.substring(0, start) + "  " + val.substring(end);
-      setSource(next);
+      setSourceWithHistory(next);
       requestAnimationFrame(() => {
         ta.selectionStart = ta.selectionEnd = start + 2;
       });
     }
-  }, [runScript]);
+  }, [handleFormatSource, handleRedo, handleUndo, runScript, setSourceWithHistory]);
 
   const handleInsertCameraToCode = useCallback((camera: ScriptCameraInsert) => {
-    setSource(prev => insertOrReplaceCameraBlock(prev, camera));
-  }, []);
+    setSourceWithHistory(prev => insertOrReplaceCameraBlock(prev, camera));
+  }, [setSourceWithHistory]);
   const { startOnboarding } = useRustSynthOnboarding();
 
   const fileName = filePath ? filePath.split("/").pop() : "unsaved";
@@ -311,11 +387,12 @@ function App() {
           <Editor
             fileName={fileName}
             source={source}
-            onSourceChange={setSource}
+            onSourceChange={setSourceWithHistory}
             onKeyDown={handleKeyDown}
             showConsole={showConsole}
             warnings={warnings}
             consoleHeight={consoleHeight}
+            onFormat={handleFormatSource}
             onConsoleResizeStart={(startY, startHeight) => {
               consoleResizeStartY.current = startY;
               consoleResizeStartHeight.current = startHeight;
@@ -392,6 +469,63 @@ function insertOrReplaceCameraBlock(source: string, camera: ScriptCameraInsert):
   block.push("");
 
   return [...block, ...filtered].join("\n");
+}
+
+function formatCode(source: string): string {
+  const INDENT = "  ";
+  let indentLevel = 0;
+  const out: string[] = [];
+
+  for (const rawLine of source.replace(/\r\n?/g, "\n").split("\n")) {
+    const trimmed = rawLine.replace(/\s+$/u, "").trim();
+
+    if (trimmed.length === 0) {
+      if (out.length > 0 && out[out.length - 1] !== "") {
+        out.push("");
+      }
+      continue;
+    }
+
+    const skipStructure = trimmed.startsWith("#") || trimmed.startsWith("//") || trimmed.startsWith("/*") || trimmed.startsWith("*");
+
+    if (!skipStructure) {
+      const leadingClosers = countLeadingClosers(trimmed);
+      indentLevel = Math.max(0, indentLevel - leadingClosers);
+    }
+
+    out.push(`${INDENT.repeat(indentLevel)}${trimmed}`);
+
+    if (!skipStructure) {
+      const delta = countOpeners(trimmed) - countClosers(trimmed);
+      indentLevel = Math.max(0, indentLevel + delta);
+    }
+  }
+
+  return out.join("\n");
+}
+
+function countLeadingClosers(line: string): number {
+  let count = 0;
+  while (count < line.length && (line[count] === "}" || line[count] === "]" || line[count] === ")")) {
+    count += 1;
+  }
+  return count;
+}
+
+function countOpeners(line: string): number {
+  let count = 0;
+  for (const ch of line) {
+    if (ch === "{" || ch === "[" || ch === "(") count += 1;
+  }
+  return count;
+}
+
+function countClosers(line: string): number {
+  let count = 0;
+  for (const ch of line) {
+    if (ch === "}" || ch === "]" || ch === ")") count += 1;
+  }
+  return count;
 }
 
 export default App;

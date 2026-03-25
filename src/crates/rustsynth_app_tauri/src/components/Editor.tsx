@@ -157,6 +157,7 @@ type EditorParams = {
   showConsole: boolean;
   warnings: string[];
   consoleHeight: number;
+  onFormat: () => void;
   onConsoleResizeStart: (startY: number, startHeight: number) => void;
 };
 
@@ -196,6 +197,7 @@ export function Editor(params: EditorParams) {
               ))}
             </pre>
           </div>
+          <button onClick={params.onFormat} className="bg-ctp-base absolute z-20 bottom-4 right-4 py-2 px-4 text-sm font-semibold cursor-pointer hover:text-ctp-mauve transition-colors">Format Code</button>
           <textarea
             ref={textareaRef}
             value={params.source}
