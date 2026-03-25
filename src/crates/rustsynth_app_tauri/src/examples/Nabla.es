@@ -1,8 +1,12 @@
+set camera_eye [4.020222 9.085386 43.068462]
+set camera_target [-4.567633 1.726552 -4.068323]
+set camera_up [0 1 0]
+set camera_fov 45
+
 set maxdepth 30
 
 { ry -90 color white } R1
 {rx -90 color white } R1
-{  x 30 y 30 z -3 s 900 900 1 color white } box
 
 Rule R1 {
 dbox

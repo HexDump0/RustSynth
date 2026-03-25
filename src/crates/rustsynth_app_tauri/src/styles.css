@@ -11,15 +11,31 @@
   width: 8px;
   height: 8px;
 }
-::-webkit-scrollbar-track {
+
+.mocha ::-webkit-scrollbar-track {
   background: #181825;
 }
-::-webkit-scrollbar-thumb {
+
+.mocha ::-webkit-scrollbar-thumb {
   background: #45475a;
   border-radius: 0;
 }
-::-webkit-scrollbar-thumb:hover {
+
+.mocha ::-webkit-scrollbar-thumb:hover {
   background: #6c7086;
+}
+
+.latte ::-webkit-scrollbar-track {
+  background: #eff1f5;
+}
+
+.latte ::-webkit-scrollbar-thumb {
+  background: #acb0be;
+  border-radius: 0;
+}
+
+.latte ::-webkit-scrollbar-thumb:hover {
+  background: #9ca0b0;
 }
 
 .shepherd-element.custom-theme .shepherd-content {

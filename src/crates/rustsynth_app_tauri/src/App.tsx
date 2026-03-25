@@ -15,6 +15,8 @@ type ScriptCameraInsert = {
   fov?: number;
 };
 
+type Theme = "light" | "dark";
+
 const EXAMPLES = Object.entries(
   import.meta.glob("./examples/**/*.es", {
     eager: true,
@@ -78,6 +80,11 @@ rule xbox {
 
 function App() {
   const HISTORY_LIMIT = 300;
+  const [theme, setTheme] = useState<Theme>(() => {
+    const saved = window.localStorage.getItem("theme");
+    if (saved === "light" || saved === "dark") return saved;
+    return "dark";
+  });
   const [source, setSource] = useState(DEFAULT_SCRIPT);
   const [scene, setScene] = useState<Scene | null>(null);
   const [status, setStatus] = useState("Ready");
@@ -157,6 +164,10 @@ function App() {
   useEffect(() => {
     if (backend) runScript();
   }, [backend]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    window.localStorage.setItem("theme", theme);
+  }, [theme]);
 
   useEffect(() => {
     const handlePointerMove = (e: PointerEvent) => {
@@ -361,10 +372,16 @@ function App() {
   const { startOnboarding } = useRustSynthOnboarding();
 
   const fileName = filePath ? filePath.split("/").pop() : "unsaved";
+  const themeClass = theme === "dark" ? "mocha" : "latte";
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-ctp-base text-ctp-text font-sans">
-      <InfoBar github="https://github.com/HexDump0/RustSynth" docs="https://github.com/HexDump0/RustSynth/blob/main/docs/docs.md"/>
+    <div className={`${themeClass} h-screen flex flex-col overflow-hidden bg-ctp-base text-ctp-text font-sans`}>
+      <InfoBar
+        github="https://github.com/HexDump0/RustSynth"
+        docs="https://github.com/HexDump0/RustSynth/blob/main/docs/docs.md"
+        theme={theme}
+        onToggleTheme={() => setTheme(prev => (prev === "dark" ? "light" : "dark"))}
+      />
 
       <MenuBar
         seed={seed}
